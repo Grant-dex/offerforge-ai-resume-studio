@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.2s ease-out;
+}
+
+:root {
+  color-scheme: light;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  /* Brand color defaults — overridden by JS theme switcher */
+  --brand-50: #fff3ed;
+  --brand-100: #ffe3d4;
+  --brand-500: #FF5C00;
+  --brand-600: #e84f00;
+  --brand-700: #bd3f00;
+  --brand: #FF5C00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 1280px;
+  background: #F6F7FB;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .top-action {
+    @apply inline-flex items-center gap-2 rounded-xl border border-slate-200/60 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition;
+  }
+  .top-action:hover {
+    border-color: rgba(var(--brand-500-rgb), 0.2);
+    background-color: rgba(var(--brand-500-rgb), 0.04);
+    color: var(--brand-500);
+  }
+  .top-action:active {
+    background-color: rgba(var(--brand-500-rgb), 0.1);
+    color: var(--brand-600);
+  }
+
+  .input {
+    @apply h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2;
+  }
+  .input:focus {
+    border-color: var(--brand-500);
+    ring-color: rgba(var(--brand-500-rgb), 0.1);
+  }
+
+  .card-elevate {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)];
+  }
+}
+
+.resume-paper {
+  min-height: auto;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 16mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .resume-paper {
+    transform: none !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .resume-paper section {
+    page-break-inside: avoid;
+  }
+}

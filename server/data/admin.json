@@ -1,0 +1,59 @@
+{
+  "admins": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "$2b$10$SSg0tJKe9RaO3X.5/pqd4.JSpMNXyJ1T9MDdK8lT.0NLDOfNNt1ve",
+      "role": "super_admin",
+      "status": 1,
+      "last_login_at": "2026-05-21T15:58:12.911Z",
+      "created_at": "2026-05-21T15:37:47.424Z",
+      "updated_at": "2026-05-21T15:58:12.911Z"
+    }
+  ],
+  "users": [],
+  "logs": [
+    {
+      "id": 1,
+      "admin_id": 1,
+      "action": "admin_login",
+      "target_type": "admin",
+      "target_id": 1,
+      "detail": null,
+      "ip": "::1",
+      "created_at": "2026-05-21T15:40:10.167Z"
+    },
+    {
+      "id": 2,
+      "admin_id": 1,
+      "action": "admin_login",
+      "target_type": "admin",
+      "target_id": 1,
+      "detail": null,
+      "ip": "::1",
+      "created_at": "2026-05-21T15:48:20.084Z"
+    },
+    {
+      "id": 3,
+      "admin_id": 1,
+      "action": "admin_login",
+      "target_type": "admin",
+      "target_id": 1,
+      "detail": null,
+      "ip": "::1",
+      "created_at": "2026-05-21T15:49:46.033Z"
+    },
+    {
+      "id": 4,
+      "admin_id": 1,
+      "action": "admin_login",
+      "target_type": "admin",
+      "target_id": 1,
+      "detail": null,
+      "ip": "::1",
+      "created_at": "2026-05-21T15:58:12.912Z"
+    }
+  ],
+  "nextUserId": 1,
+  "nextLogId": 5
+}

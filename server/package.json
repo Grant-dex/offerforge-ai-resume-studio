@@ -1,0 +1,23 @@
+{
+  "name": "offerforge-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed-admin": "node seed-admin.js",
+    "db-init": "mysql -u root -p < init.sql && mysql -u root -p < init-admin.sql"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "fast-xml-parser": "^4.3.0",
+    "jsonwebtoken": "^9.0.0",
+    "mysql2": "^3.6.0",
+    "nodemailer": "^6.9.0",
+    "puppeteer": "^24.10.1"
+  }
+}
