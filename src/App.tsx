@@ -1,150 +1,101 @@
-import { ChevronUp } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, FileCheck2, FileText, GraduationCap, Menu, Sparkles, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AIAnalysisPanel } from "./components/AIAnalysisPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LivePreview } from "./components/LivePreview";
+import { TemplatePicker } from "./components/TemplatePicker";
 import { Sidebar } from "./components/Sidebar";
-import { StepTabs } from "./components/StepTabs";
 import { ToastContainer } from "./components/Toast";
 import { TopBar } from "./components/TopBar";
+import { WritingGuide } from "./components/WritingGuide";
 import { BasicInfo } from "./pages/BasicInfo";
 import { PreviewExportPage } from "./pages/PreviewExport";
 import { ProjectExperiencePage } from "./pages/ProjectExperience";
 import { SharedResumePage } from "./pages/SharedResume";
 import { SkillsEducationPage } from "./pages/SkillsEducation";
 import { WorkExperiencePage } from "./pages/WorkExperience";
+import { useResumeStore } from "./store/resumeStore";
+import { getResumeChecks } from "./utils/resumeChecks";
+
+const sections = [
+  { path: "/basic", label: "基本信息", icon: UserRound },
+  { path: "/work", label: "工作经历", icon: BriefcaseBusiness },
+  { path: "/projects", label: "项目经历", icon: FileText },
+  { path: "/skills", label: "教育与技能", icon: GraduationCap },
+  { path: "/export", label: "预览与导出", icon: FileCheck2 }
+];
+type ToolTab = "edit" | "guide" | "ai";
 
 function MainEditor() {
   const location = useLocation();
-  const [editorOpen, setEditorOpen] = useState(true);
-  const [previewHeight, setPreviewHeight] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem("offerforge-preview-height");
-      return stored ? parseInt(stored) : 420;
-    } catch { return 420; }
-  });
-  const [dragging, setDragging] = useState(false);
-  const dragStartY = useRef(0);
-  const dragStartHeight = useRef(420);
-  const mainRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
+  const resume = useResumeStore(state => state.resume);
+  const [tab, setTab] = useState<ToolTab>("edit");
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [checksOpen, setChecksOpen] = useState(false);
+  const toolsRef = useRef<HTMLElement>(null);
+  const managerButton = useRef<HTMLButtonElement>(null);
+  const managerPanel = useRef<HTMLElement>(null);
+  const checks = getResumeChecks(resume);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setDragging(true);
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = previewHeight;
-    e.preventDefault();
-  };
-
+  useEffect(() => { setTab("edit"); setMobileView("edit"); toolsRef.current?.scrollTo({ top: 0 }); }, [location.pathname, location.key]);
   useEffect(() => {
-    if (!dragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const delta = e.clientY - dragStartY.current;
-      const mainHeight = mainRef.current?.clientHeight ?? window.innerHeight;
-      const maxHeight = mainHeight - 260;
-      const newHeight = Math.max(200, Math.min(maxHeight, dragStartHeight.current + delta));
-      setPreviewHeight(newHeight);
+    const open = () => { setTab("edit"); setMobileView("edit"); };
+    window.addEventListener("offerforge:open-editor", open);
+    return () => window.removeEventListener("offerforge:open-editor", open);
+  }, []);
+  useEffect(() => {
+    if (!managerOpen) return;
+    const panel = managerPanel.current;
+    const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]') ?? []).filter(element => element.getClientRects().length > 0);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    focusable()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      // Nested account dialogs own their keyboard navigation.
+      if ((event.target as HTMLElement).closest('[role="dialog"]') !== panel) return;
+      if (event.key === "Escape") { event.stopPropagation(); setManagerOpen(false); }
+      if (event.key === "Tab") {
+        const elements = focusable(), first = elements[0], last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
     };
-
-    const handleMouseUp = () => {
-      setDragging(false);
-      setPreviewHeight((h) => {
-        try { localStorage.setItem("offerforge-preview-height", String(h)); } catch { /* ignore */ }
-        return h;
-      });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragging]);
+    panel?.addEventListener("keydown", onKey);
+    return () => { panel?.removeEventListener("keydown", onKey); document.body.style.overflow = previousOverflow; managerButton.current?.focus(); };
+  }, [managerOpen]);
 
   return (
-    <div className={`h-screen overflow-hidden bg-[#F6F7FB] text-ink ${dragging ? "select-none cursor-row-resize" : ""}`}>
-      <div className="flex h-screen min-w-[1280px]">
-        <Sidebar />
-
-        {/* 中间主工作区 */}
-        <main ref={mainRef} className="flex h-screen flex-1 flex-col overflow-hidden px-6 pt-6">
-          <TopBar />
-
-          {/* 实时预览区 — 白色悬浮卡片 */}
-          <div
-            style={{ height: editorOpen ? previewHeight : undefined }}
-            className={`mx-auto w-full max-w-[1100px] shrink-0 overflow-y-auto rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03),0_8px_32px_rgba(0,0,0,0.04)] ${!editorOpen ? "flex-1" : ""}`}
-          >
-            <LivePreview />
-          </div>
-
-          {/* 拖拽手柄 — 仅编辑区展开时显示 */}
-          {editorOpen && (
-            <div
-              className={`group relative flex h-3 shrink-0 cursor-row-resize items-center justify-center ${
-                dragging ? "cursor-row-resize" : ""
-              }`}
-              onMouseDown={handleMouseDown}
-            >
-              <div
-                className={`h-0.5 rounded-full transition-all duration-200 ${
-                  dragging
-                    ? "w-20 bg-[#6C63FF]"
-                    : "w-0 bg-transparent group-hover:w-12 group-hover:bg-slate-300"
-                }`}
-              />
-            </div>
-          )}
-
-          {/* 折叠编辑条 — 毛玻璃胶囊 */}
-          <div className="relative flex shrink-0 items-center justify-center py-2">
-            <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-slate-200" />
-            <button
-              onClick={() => setEditorOpen(!editorOpen)}
-              className="group relative z-10 inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm backdrop-blur transition hover:border-[#6C63FF]/30 hover:text-[#6C63FF] hover:shadow-md"
-            >
-              {editorOpen ? "收起编辑区" : "展开编辑区"}
-              <ChevronUp size={14} className={`transition-transform duration-200 ${editorOpen ? "" : "rotate-180"}`} />
-            </button>
-          </div>
-
-          {/* 编辑表单区 — 白色悬浮卡片 */}
-          {editorOpen && (
-            <div className="mx-auto w-full max-w-[1200px] flex-1 min-h-0 overflow-y-auto rounded-2xl border border-slate-200/60 bg-white p-8 shadow-[0_2px_12px_rgba(0,0,0,0.03),0_8px_32px_rgba(0,0,0,0.04)]">
-              <StepTabs />
-              <div key={location.pathname} className="animate-fadeIn">
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/basic" replace />} />
-                    <Route path="/basic" element={<BasicInfo />} />
-                    <Route path="/work" element={<WorkExperiencePage />} />
-                    <Route path="/projects" element={<ProjectExperiencePage />} />
-                    <Route path="/skills" element={<SkillsEducationPage />} />
-                    <Route path="/export" element={<PreviewExportPage />} />
-                  </Routes>
-                </ErrorBoundary>
-              </div>
-            </div>
-          )}
-        </main>
-
-        {/* 右侧 AI 分析面板 */}
-        <AIAnalysisPanel />
+    <div className="editor-app">
+      <TopBar onManage={() => setManagerOpen(true)} onCheck={() => setChecksOpen(!checksOpen)} checksOpen={checksOpen} onExport={() => navigate('/export')} managerButtonRef={managerButton} />
+      <div className="workspace-toolbar">
+        <TemplatePicker />
+        <span className="workflow-caption">完善经历 <span aria-hidden="true">→</span> 针对岗位优化 <span aria-hidden="true">→</span> 检查与导出</span>
+      </div>
+      {checksOpen && <section className="preflight-panel" aria-label="投递前检查">
+        <div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold">投递前检查</h2><p className="mt-1 text-xs text-neutral-500">检查可填写项，最终内容和事实由你确认。</p></div><button className="icon-button" aria-label="关闭检查" onClick={() => setChecksOpen(false)}><X size={18}/></button></div>
+        <div className="preflight-grid">{checks.map(check => <button key={check.id} className="preflight-item" onClick={() => { navigate(check.path); setChecksOpen(false); }}><span className="font-medium">{check.title}</span><span>{check.detail}</span><span className="text-xs text-neutral-500">{check.action} →</span></button>)}</div>
+      </section>}
+      <div className="mobile-view-switch" role="group" aria-label="工作区视图">
+        <button aria-pressed={mobileView === "edit"} onClick={() => setMobileView("edit")}>编辑简历</button><button aria-pressed={mobileView === "preview"} onClick={() => setMobileView("preview")}>查看预览</button>
+      </div>
+      <div className="workspace-grid" data-mobile-view={mobileView}>
+        <nav className="section-outline" aria-label="简历章节"><p className="outline-caption">内容大纲</p>{sections.map(({path,label,icon:Icon}) => <NavLink key={path} to={path} className={({isActive}) => `outline-link ${isActive ? "active" : ""}`}><Icon size={16}/><span>{label}</span></NavLink>)}<div className="outline-tip"><BookOpen size={16}/><p>先写真实经历，再用参考与建议完善表达。</p></div></nav>
+        <main className="preview-workspace" aria-label="实时简历预览"><LivePreview activeSection={location.pathname.slice(1)} /></main>
+        <aside ref={toolsRef} className="editor-tools" aria-label="简历编辑与辅助">
+          <div className="editor-tool-tabs" role="tablist" aria-label="写作工具">{([{key:"edit",label:"编辑内容",icon:FileText},{key:"guide",label:"写作参考",icon:BookOpen},{key:"ai",label:"岗位建议",icon:Sparkles}] as const).map(item=><button id={`tool-tab-${item.key}`} role="tab" aria-selected={tab===item.key} aria-controls={`tool-panel-${item.key}`} key={item.key} onClick={()=>setTab(item.key)}><item.icon size={14}/>{item.label}</button>)}</div>
+          <div role="tabpanel" id="tool-panel-edit" aria-labelledby="tool-tab-edit" hidden={tab!=="edit"} className="editor-form-panel"><ErrorBoundary><Routes><Route path="/" element={<Navigate to="/basic" replace/>}/><Route path="/basic" element={<BasicInfo/>}/><Route path="/work" element={<WorkExperiencePage/>}/><Route path="/projects" element={<ProjectExperiencePage/>}/><Route path="/skills" element={<SkillsEducationPage/>}/><Route path="/export" element={<PreviewExportPage/>}/><Route path="*" element={<Navigate to="/basic" replace/>}/></Routes></ErrorBoundary></div>
+          <div role="tabpanel" id="tool-panel-guide" aria-labelledby="tool-tab-guide" hidden={tab!=="guide"} className="editor-form-panel"><WritingGuide/></div>
+          <div role="tabpanel" id="tool-panel-ai" aria-labelledby="tool-tab-ai" hidden={tab!=="ai"} className="editor-form-panel"><AIAnalysisPanel/></div>
+        </aside>
+      </div>
+      <div className="resume-manager" hidden={!managerOpen}>
+        <button className="manager-backdrop" aria-label="关闭我的简历" onClick={()=>setManagerOpen(false)}/>
+        <section ref={managerPanel} className="manager-drawer" role="dialog" aria-modal="true" aria-label="我的简历与账户"><div className="manager-heading"><span className="flex items-center gap-2 font-semibold"><Menu size={17}/>我的简历与账户</span><button className="icon-button" aria-label="关闭我的简历与账户" onClick={()=>setManagerOpen(false)}><X size={18}/></button></div><Sidebar/></section>
       </div>
     </div>
   );
 }
-
-export function App() {
-  return (
-    <ErrorBoundary>
-      <ToastContainer />
-      <Routes>
-        <Route path="/shared" element={<SharedResumePage />} />
-        <Route path="/*" element={<MainEditor />} />
-      </Routes>
-    </ErrorBoundary>
-  );
-}
+export function App() { return <ErrorBoundary><ToastContainer/><Routes><Route path="/shared" element={<SharedResumePage/>}/><Route path="/*" element={<MainEditor/>}/></Routes></ErrorBoundary>; }

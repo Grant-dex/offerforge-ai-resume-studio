@@ -30,7 +30,7 @@ export async function onRequest(context) {
     }
 
     // PRO check
-    if (!user.isPro && user.email !== FREE_PRO_EMAIL) {
+    if (user.is_pro !== 1 && user.is_pro !== true && user.email !== FREE_PRO_EMAIL) {
       return json({ error: "此功能需要 PRO 会员" }, 402);
     }
 

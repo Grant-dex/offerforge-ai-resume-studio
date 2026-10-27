@@ -1,448 +1,229 @@
-import { Check, ChevronRight, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Zap } from "lucide-react";
+import { ArrowRight, Check, Lightbulb, Loader2, RefreshCw, Target, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useResumeStore } from "../store/resumeStore";
-import { useT } from "../i18n";
-import { useBrandColors } from "../utils/useBrandColors";
 import { isProUser } from "../utils/proGate";
 import type { AIScoreResult, AISuggestion, JDMatchResult } from "../utils/ai";
 import { fetchAIScore, fetchAISuggestions, fetchJDMatch } from "../utils/ai";
+import {
+  replaceSuggestionText, resolveSuggestionTarget, resumeAnalysisKey,
+  suggestionRoute, suggestionTargetValue, type SuggestionTarget,
+} from "../utils/aiAnalysis";
 import { Modal } from "./Modal";
 import { showToast } from "./Toast";
 
-function ScoreRing({ score, size = 100, strokeColor, strokeColor2 }: { score: number; size?: number; strokeColor?: string; strokeColor2?: string }) {
-  const r = (size / 2) - 8;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference;
-  const gradientId = `scoreGradient-${strokeColor || "default"}`;
+type Result<T> = { data: T | null; key: string; pending: boolean; error: string | null };
+const emptyResult = <T,>(): Result<T> => ({ data: null, key: "", pending: false, error: null });
+const primaryButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-neutral-800 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40";
+const secondaryButton = "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40";
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : "请求未完成，请重试。";
+const validScore = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
 
+function Status({ pending, error, stale }: { pending: boolean; error: string | null; stale: boolean }) {
   return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f1f5f9" strokeWidth="6" />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth="6"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          className="transition-all duration-700 ease-out"
-        />
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={strokeColor || "#6C63FF"} />
-            <stop offset="100%" stopColor={strokeColor2 || "#a78bfa"} />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-slate-800">{score}</span>
-        <span className="text-[10px] font-medium text-slate-400">分</span>
-      </div>
+    <div className="space-y-2 text-xs leading-6" aria-live="polite">
+      {pending && <p className="flex items-center gap-2 text-neutral-600"><Loader2 size={14} className="animate-spin" />正在分析，请稍候…</p>}
+      {error && <p role="alert" className="rounded-lg border border-neutral-300 bg-neutral-50 p-3 text-neutral-700">{error}</p>}
+      {stale && <p className="rounded-lg bg-neutral-100 p-3 text-neutral-600">内容已更新，以下结果对应此前的内容。请重新分析以获取最新建议。</p>}
     </div>
   );
 }
 
 export function AIAnalysisPanel() {
-  const { t } = useT();
-  const brand = useBrandColors();
+  const navigate = useNavigate();
   const resume = useResumeStore((state) => state.resume);
-  const updatePersonal = useResumeStore((state) => state.updatePersonal);
-  const updateWork = useResumeStore((state) => state.updateWork);
-  const updateSkills = useResumeStore((state) => state.updateSkills);
-
-  const [scoreLoading, setScoreLoading] = useState(false);
-  const [scores, setScores] = useState<AIScoreResult | null>(null);
-  const scoreAbortRef = useRef<AbortController | null>(null);
-
-  const [sugLoading, setSugLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
-  const sugAbortRef = useRef<AbortController | null>(null);
-
+  const currentKey = resumeAnalysisKey(resume);
+  const [score, setScore] = useState<Result<AIScoreResult>>(emptyResult);
+  const [suggestions, setSuggestions] = useState<Result<AISuggestion[]>>(emptyResult);
+  const [jd, setJd] = useState<Result<JDMatchResult>>(emptyResult);
   const [jdInput, setJdInput] = useState("");
-  const [jdLoading, setJdLoading] = useState(false);
-  const [jdMatch, setJdMatch] = useState<JDMatchResult | null>(null);
-  const jdAbortRef = useRef<AbortController | null>(null);
-
   const [proGateOpen, setProGateOpen] = useState(false);
+  const [applied, setApplied] = useState<Record<string, { target: SuggestionTarget; before: string; after: string }>>({});
+  const analysisRequest = useRef<AbortController | null>(null);
+  const jdRequest = useRef<AbortController | null>(null);
+  const pending = score.pending || suggestions.pending;
+  const currentJdKey = JSON.stringify([currentKey, jdInput.trim()]);
 
-  // 确认优化弹窗
-  const [optimizeOpen, setOptimizeOpen] = useState(false);
-  const [optimizeLoading, setOptimizeLoading] = useState(false);
-  const [optimizeList, setOptimizeList] = useState<AISuggestion[]>([]);
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
-
-  const checkPro = () => {
-    if (!isProUser()) {
-      setProGateOpen(true);
-      return false;
-    }
-    return true;
-  };
-
-  useEffect(() => {
-    loadScore();
-    loadSuggestions();
+  useEffect(() => () => {
+    analysisRequest.current?.abort();
+    jdRequest.current?.abort();
   }, []);
 
-  // 简历内容变化时自动刷新评分（2 秒防抖）
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      loadScore();
-      loadSuggestions();
-    }, 2000);
-    return () => clearTimeout(debounceRef.current);
-  }, [resume]);
+  function checkPro() {
+    if (isProUser()) return true;
+    setProGateOpen(true);
+    return false;
+  }
 
-  const loadScore = async () => {
-    if (!isProUser()) return;
-    scoreAbortRef.current?.abort();
-    const controller = new AbortController();
-    scoreAbortRef.current = controller;
-    setScoreLoading(true);
-    try {
-      const result = await fetchAIScore(resume, controller.signal);
-      setScores(result);
-    } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        showToast("AI 评分加载失败，请重试", "error");
-      }
-    }
-    finally { setScoreLoading(false); }
-  };
-
-  const loadSuggestions = async () => {
-    if (!isProUser()) return;
-    sugAbortRef.current?.abort();
-    const controller = new AbortController();
-    sugAbortRef.current = controller;
-    setSugLoading(true);
-    try {
-      const result = await fetchAISuggestions(resume, controller.signal);
-      setSuggestions(result.slice(0, 5));
-    } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        showToast("优化建议加载失败，请重试", "error");
-      }
-    }
-    finally { setSugLoading(false); }
-  };
-
-  const handleJDMatch = async () => {
+  async function analyzeResume() {
     if (!checkPro()) return;
-    if (!jdInput.trim()) return;
-    jdAbortRef.current?.abort();
+    analysisRequest.current?.abort();
     const controller = new AbortController();
-    jdAbortRef.current = controller;
-    setJdLoading(true);
-    setJdMatch(null);
+    analysisRequest.current = controller;
+    const snapshot = useResumeStore.getState().resume;
+    const key = resumeAnalysisKey(snapshot);
+    setScore((previous) => ({ ...previous, pending: true, error: null }));
+    setSuggestions((previous) => ({ ...previous, pending: true, error: null }));
+    await Promise.allSettled([
+      (async () => {
+        try {
+          const data = await fetchAIScore(snapshot, controller.signal);
+          if (!validScore(data?.overall) || ![data.keyword, data.format, data.completeness, data.quantified].every(validScore) || !Array.isArray(data.suggestions)) {
+            throw new Error("评分返回格式不完整，请重新分析。");
+          }
+          if (data.suggestions.some((text) => text === "解析失败")) throw new Error("评分结果解析失败，请重新分析。");
+          if (!controller.signal.aborted) setScore({ data, key, pending: false, error: null });
+        } catch (error) {
+          if (!controller.signal.aborted) setScore((previous) => ({ ...previous, pending: false, error: errorMessage(error) }));
+        }
+      })(),
+      (async () => {
+        try {
+          const data = await fetchAISuggestions(snapshot, controller.signal);
+          if (!Array.isArray(data) || data.some((item) => !item || ![item.id, item.module, item.field, item.title, item.original, item.suggested].every((value) => typeof value === "string"))) {
+            throw new Error("建议返回格式不完整，请重新分析。");
+          }
+          if (!controller.signal.aborted) {
+            setSuggestions({ data, key, pending: false, error: null });
+            setApplied({});
+          }
+        } catch (error) {
+          if (!controller.signal.aborted) setSuggestions((previous) => ({ ...previous, pending: false, error: errorMessage(error) }));
+        }
+      })(),
+    ]);
+  }
+
+  async function analyzeJob() {
+    if (!jdInput.trim() || !checkPro()) return;
+    jdRequest.current?.abort();
+    const controller = new AbortController();
+    jdRequest.current = controller;
+    const snapshot = useResumeStore.getState().resume;
+    const description = jdInput.trim();
+    const key = JSON.stringify([resumeAnalysisKey(snapshot), description]);
+    setJd((previous) => ({ ...previous, pending: true, error: null }));
     try {
-      const result = await fetchJDMatch(resume, jdInput, controller.signal);
-      setJdMatch(result);
-    } catch {
-      showToast("JD 匹配分析失败，请重试", "error");
-    } finally {
-      setJdLoading(false);
-    }
-  };
-
-  const handleOneClickOptimize = async () => {
-    if (!checkPro()) return;
-    setOptimizeLoading(true);
-    setOptimizeOpen(true);
-    setAppliedIds(new Set());
-    try {
-      const result = await fetchAISuggestions(resume);
-      setOptimizeList(result.slice(0, 5));
-      setSuggestions(result.slice(0, 5));
-    } catch {
-      showToast("AI 建议加载失败，请重试", "error");
-      setOptimizeOpen(false);
-    } finally {
-      setOptimizeLoading(false);
-    }
-  };
-
-  const applySuggestion = (sug: AISuggestion) => {
-    if (appliedIds.has(sug.id)) return;
-    if (sug.module === "个人信息" || sug.field === "summary") {
-      updatePersonal({ summary: sug.suggested } as any);
-    } else if (sug.module === "工作经历" && resume.work.length > 0) {
-      updateWork(resume.work[0].id, { bullets: [...resume.work[0].bullets, sug.suggested] });
-    } else if (sug.module === "技能") {
-      if (!resume.skills.includes(sug.suggested)) {
-        updateSkills([...resume.skills, sug.suggested]);
+      const data = await fetchJDMatch(snapshot, description, controller.signal);
+      if (!validScore(data?.score) || !Array.isArray(data.matchedSkills) || data.matchedSkills.some((skill) => typeof skill !== "string") || typeof data.suggestion !== "string") {
+        throw new Error("岗位分析返回格式不完整，请重试。");
       }
-    } else if (sug.module === "项目经历" && resume.projects.length > 0) {
-      const p = resume.projects[0];
-      useResumeStore.getState().updateProject(p.id, { bullets: [...p.bullets, sug.suggested] });
+      if (data.suggestion === "分析失败，请重试") throw new Error("岗位分析未完成，请重试。");
+      if (!controller.signal.aborted) setJd({ data, key, pending: false, error: null });
+    } catch (error) {
+      if (!controller.signal.aborted) setJd((previous) => ({ ...previous, pending: false, error: errorMessage(error) }));
     }
-    setAppliedIds(new Set([...appliedIds, sug.id]));
-    showToast(`已应用：${sug.title}`, "success");
-  };
+  }
 
-  const applyAll = () => {
-    for (const sug of optimizeList) {
-      if (!appliedIds.has(sug.id)) {
-        applySuggestion(sug);
-      }
+  function commitReplacement(target: SuggestionTarget, before: string, after: string): boolean {
+    const store = useResumeStore.getState();
+    const updated = replaceSuggestionText(store.resume, target, before, after);
+    if (!updated) return false;
+    switch (target.kind) {
+      case "summary": store.updatePersonal({ summary: updated.personal.summary }); break;
+      case "education": store.updateEducation({ description: updated.education.description }); break;
+      case "skill": store.updateSkills(updated.skills); break;
+      case "work": store.updateWork(target.itemId, { bullets: updated.work.find((item) => item.id === target.itemId)!.bullets }); break;
+      case "project": store.updateProject(target.itemId, { bullets: updated.projects.find((item) => item.id === target.itemId)!.bullets }); break;
     }
-  };
+    return true;
+  }
 
-  const appliedCount = optimizeList.filter(s => appliedIds.has(s.id)).length;
-  const allApplied = appliedCount === optimizeList.length && optimizeList.length > 0;
+  function apply(suggestion: AISuggestion, key: string) {
+    const target = resolveSuggestionTarget(useResumeStore.getState().resume, suggestion);
+    if (!target || !commitReplacement(target, suggestion.original, suggestion.suggested)) {
+      showToast("未能唯一定位原文，请前往对应章节编辑。", "info");
+      return;
+    }
+    setApplied((previous) => ({ ...previous, [key]: { target, before: suggestion.original, after: suggestion.suggested } }));
+    showToast(`已更新：${target.label}`, "success");
+  }
 
-  const strengths = [
-    { icon: Zap, text: "工作经验丰富", show: resume.work.length > 0 },
-    { icon: Target, text: "项目经历匹配", show: resume.projects.length > 0 },
-    { icon: Sparkles, text: "技能标签完整", show: resume.skills.length >= 3 },
-  ].filter(s => s.show);
+  function undo(key: string) {
+    const change = applied[key];
+    if (!change || !commitReplacement(change.target, change.after, change.before)) {
+      showToast("这段内容已再次修改，请前往对应章节检查。", "info");
+      return;
+    }
+    setApplied((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+    showToast("已撤销这条修改", "success");
+  }
 
-  const weaknesses = [
-    { text: "自我评价偏空泛", show: (resume.personal.summary?.length || 0) < 30 },
-    { text: "项目数据缺少量化", show: resume.projects.some(p => p.bullets.join("").match(/\d+%?/g) === null) },
-    { text: "缺少 ATS 关键词", show: resume.atsScore < 70 },
-  ].filter(w => w.show);
+  function editSection(suggestion: AISuggestion) {
+    const path = suggestionRoute(suggestion);
+    navigate(path, { state: { editorTab: "edit" } });
+    window.dispatchEvent(new CustomEvent("offerforge:open-editor", { detail: { path } }));
+  }
 
   return (
-    <>
-      {/* PRO 门禁弹窗 */}
-      <Modal open={proGateOpen} onClose={() => setProGateOpen(false)} title="升级至 PRO">
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-slate-600">AI 评分、优化建议、JD 匹配等智能功能需要升级至 PRO 会员才能使用。</p>
-          <button
-            className="w-full rounded-xl bg-brand-500 py-2.5 text-sm font-bold text-white transition hover:bg-brand-600"
-            onClick={() => setProGateOpen(false)}
-          >
-            我知道了
-          </button>
+    <div className="offerforge-ai-tools min-w-0 space-y-6 text-neutral-800">
+      <section className="space-y-4" aria-labelledby="ai-job-heading">
+        <div>
+          <p className="mb-2 flex items-center gap-1.5 text-xs text-neutral-500"><Target size={14} />按岗位调整</p>
+          <h2 id="ai-job-heading" className="text-lg font-semibold tracking-tight">让岗位要求有据可查</h2>
+          <p className="mt-2 text-xs leading-6 text-neutral-500">粘贴职位要求，结合你的真实经历，找到可以补充和强调的内容。</p>
         </div>
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium text-neutral-700">目标岗位描述（JD）</span>
+          <textarea value={jdInput} onChange={(event) => setJdInput(event.target.value)} rows={6} placeholder="粘贴工作职责、技能要求与任职条件…" className="w-full resize-y rounded-lg border border-neutral-200 bg-white p-3 text-sm leading-6 text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-300" />
+        </label>
+        <button type="button" onClick={analyzeJob} disabled={jd.pending || !jdInput.trim()} className={`${primaryButton} w-full`}>
+          {jd.pending ? <Loader2 size={14} className="animate-spin" /> : <Target size={14} />}
+          {jd.pending ? "分析岗位要求…" : jd.data ? "重新分析岗位" : "分析岗位匹配"}
+        </button>
+        <Status pending={false} error={jd.error} stale={Boolean(jd.data && jd.key !== currentJdKey)} />
+        {jd.data && <div className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+          <div className="flex items-baseline justify-between gap-3"><h3 className="text-xs font-medium text-neutral-600">AI 岗位匹配参考</h3><span className="text-xl font-semibold">{Math.round(jd.data.score)}<span className="text-xs font-normal text-neutral-500"> / 100</span></span></div>
+          <p className="text-xs text-neutral-500">基于本次输入，不代表实际录用概率。</p>
+          {jd.data.matchedSkills.length > 0 && <div className="flex flex-wrap gap-1.5">{jd.data.matchedSkills.map((skill, index) => <span key={`${index}-${skill}`} className="rounded border border-neutral-200 bg-white px-2 py-1 text-xs">{skill}</span>)}</div>}
+          <p className="whitespace-pre-wrap break-words text-xs leading-6 text-neutral-700">{jd.data.suggestion}</p>
+        </div>}
+      </section>
+
+      <section className="space-y-4 border-t border-neutral-200 pt-6" aria-labelledby="ai-resume-heading">
+        <div><p className="mb-2 flex items-center gap-1.5 text-xs text-neutral-500"><Lightbulb size={14} />检查内容表达</p><h2 id="ai-resume-heading" className="text-base font-semibold">简历分析与修改建议</h2><p className="mt-2 text-xs leading-6 text-neutral-500">主动分析当前内容，查看评分依据与逐条修改建议。</p></div>
+        <button type="button" className={`${secondaryButton} w-full`} onClick={analyzeResume} disabled={pending}>
+          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}{pending ? "分析简历中…" : score.data || suggestions.data ? "重新分析简历" : "分析当前简历"}
+        </button>
+        <Status pending={false} error={score.error} stale={Boolean(score.data && score.key !== currentKey)} />
+        {score.data && <div className="rounded-lg border border-neutral-200 p-4">
+          <div className="mb-4 flex items-baseline justify-between"><h3 className="text-xs font-medium text-neutral-600">AI 简历评分</h3><strong className="text-2xl font-semibold">{Math.round(score.data.overall)}<span className="text-xs font-normal text-neutral-500"> / 100</span></strong></div>
+          <div className="space-y-3">{([
+            ["关键词", score.data.keyword], ["结构与格式", score.data.format], ["内容完整度", score.data.completeness], ["成果表达", score.data.quantified],
+          ] as const).map(([label, value]) => <div key={label}><div className="mb-1 flex justify-between text-xs text-neutral-600"><span>{label}</span><span>{Math.round(value)}</span></div><div className="h-1 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-neutral-500" style={{ width: `${value}%` }} /></div></div>)}</div>
+          {score.data.suggestions.length > 0 && <ul className="mt-4 list-disc space-y-1 border-t border-neutral-100 pl-4 pt-3 text-xs leading-6 text-neutral-600">{score.data.suggestions.filter((text) => typeof text === "string").map((text, index) => <li key={index}>{text}</li>)}</ul>}
+          <p className="mt-3 text-[11px] leading-5 text-neutral-500">AI 内容评估，仅作为修改参考；实际分页请在导出前预览。</p>
+        </div>}
+        <Status pending={false} error={suggestions.error} stale={Boolean(suggestions.data && suggestions.key !== currentKey && (!score.data || score.key === currentKey))} />
+        {suggestions.data?.length === 0 && <p className="rounded-lg bg-neutral-50 p-3 text-xs leading-6 text-neutral-600">本次未返回具体修改建议，仍可参考评分提示并自行检查。</p>}
+        {suggestions.data?.map((suggestion, index) => {
+          const key = `${index}:${suggestion.id}:${suggestion.original}`;
+          const change = applied[key];
+          const target = resolveSuggestionTarget(resume, suggestion);
+          const canUndo = Boolean(change && suggestionTargetValue(resume, change.target) === change.after);
+          return <article key={key} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+            <div><p className="mb-1 text-[11px] text-neutral-500">{suggestion.module}{target ? ` · ${target.label}` : ""}</p><h3 className="break-words text-sm font-medium">{suggestion.title}</h3></div>
+            {suggestion.original && <div><p className="mb-1 text-[11px] text-neutral-500">原文</p><p className="whitespace-pre-wrap break-words text-xs leading-6 text-neutral-500">{suggestion.original}</p></div>}
+            <div className="rounded-md bg-neutral-50 p-3"><p className="mb-1 text-[11px] text-neutral-500">建议表达 · 请核实事实</p><p className="whitespace-pre-wrap break-words text-xs leading-6 text-neutral-800">{suggestion.suggested}</p></div>
+            <div className="flex flex-wrap gap-2">
+              {change ? <button type="button" onClick={() => undo(key)} disabled={!canUndo || pending} className={secondaryButton}><Undo2 size={13} />撤销修改</button> : target && <button type="button" onClick={() => apply(suggestion, key)} disabled={pending || suggestion.original === suggestion.suggested} className={primaryButton}><Check size={13} />采纳这一处</button>}
+              <button type="button" onClick={() => editSection(suggestion)} className={secondaryButton}>前往编辑<ArrowRight size={13} /></button>
+            </div>
+            {change && <p className="text-[11px] leading-5 text-neutral-500">{canUndo ? "已替换对应原文，可撤销本次修改。" : "此段已再次修改，保留你最新的编辑。"}</p>}
+            {!change && !target && <p className="text-[11px] leading-5 text-neutral-500">未能唯一定位原文，请在对应章节核对后手动修改。</p>}
+          </article>;
+        })}
+        {!score.data && !suggestions.data && !pending && !score.error && !suggestions.error && <p className="rounded-lg bg-neutral-50 p-3 text-xs leading-6 text-neutral-500">尚未分析。准备好内容后，点击上方按钮开始。</p>}
+      </section>
+      <p className="text-[11px] leading-5 text-neutral-500">AI 分析需登录并拥有 PRO 权限。建议只使用能够核实的经历与成果。</p>
+      <Modal open={proGateOpen} onClose={() => setProGateOpen(false)} title="使用 AI 分析">
+        <p className="text-sm leading-7 text-neutral-600">AI 评分、修改建议与岗位匹配需要登录并拥有 PRO 权限。你可以继续编辑简历、查看写作参考和预览排版。</p>
+        <button type="button" onClick={() => setProGateOpen(false)} className={`${primaryButton} mt-5 w-full`}>继续编辑</button>
       </Modal>
-
-      <aside className="hidden w-[320px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-slate-100 bg-[#F6F7FB] p-5 xl:flex">
-        {/* 简历评分卡片 */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={16} className="text-[#6C63FF]" />
-            <h3 className="text-sm font-bold text-slate-700">简历评分</h3>
-          </div>
-          <div className="flex flex-col items-center py-3">
-            {scoreLoading ? (
-              <Loader2 size={40} className="animate-spin text-[#6C63FF]" />
-            ) : (
-              <ScoreRing score={scores?.overall ?? resume.atsScore} strokeColor={brand["500"]} strokeColor2={brand["600"]} />
-            )}
-            <p className="mt-2 text-xs text-slate-400">
-              超过 <span className="font-bold text-slate-600">76%</span> 求职者
-            </p>
-          </div>
-
-          {strengths.length > 0 && (
-            <div className="mt-3 space-y-1.5 border-t border-slate-50 pt-3">
-              <p className="text-[10px] font-semibold uppercase text-emerald-500">优势项</p>
-              {strengths.map((s) => (
-                <div key={s.text} className="flex items-center gap-2 text-xs text-slate-600">
-                  <s.icon size={12} className="text-emerald-400" />
-                  {s.text}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {weaknesses.length > 0 && (
-            <div className="mt-3 space-y-1.5 border-t border-slate-50 pt-3">
-              <p className="text-[10px] font-semibold uppercase text-amber-500">待优化项</p>
-              {weaknesses.map((w) => (
-                <div key={w.text} className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="text-amber-400">✖</span>
-                  {w.text}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* AI 优化建议卡片 */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb size={16} className="text-amber-400" />
-            <h3 className="text-sm font-bold text-slate-700">AI 优化建议</h3>
-          </div>
-
-          {sugLoading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 size={20} className="animate-spin text-slate-300" />
-            </div>
-          ) : suggestions.length > 0 ? (
-            <div className="space-y-2">
-              {suggestions.map((sug) => (
-                <div key={sug.id} className="rounded-xl border border-slate-50 bg-slate-50/50 p-3 text-xs leading-5 text-slate-600">
-                  <span className="font-medium text-slate-700">{sug.title}</span>
-                  <p className="mt-1 text-slate-400 line-clamp-2">{sug.suggested}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2 text-xs text-slate-400 leading-5">
-              <div className="rounded-xl border border-slate-50 bg-slate-50/50 p-3">建议增加量化成果，如"提升转化率 30%"</div>
-              <div className="rounded-xl border border-slate-50 bg-slate-50/50 p-3">建议突出核心技能，匹配目标岗位要求</div>
-              <div className="rounded-xl border border-slate-50 bg-slate-50/50 p-3">建议优化 ATS 关键词，提高通过率</div>
-            </div>
-          )}
-
-          <button
-            onClick={handleOneClickOptimize}
-            className="mt-4 w-full rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-[0.98]"
-            style={{
-              background: `linear-gradient(135deg, ${brand["500"]}, ${brand["600"]})`,
-              boxShadow: `0 4px 12px ${brand["500"]}40`,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = `0 6px 20px ${brand["500"]}59`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = `0 4px 12px ${brand["500"]}40`;
-            }}
-          >
-            ⚡ 一键优化
-          </button>
-        </div>
-
-        {/* JD 匹配度卡片 */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Target size={16} className="text-[#6C63FF]" />
-            <h3 className="text-sm font-bold text-slate-700">JD 匹配度</h3>
-          </div>
-
-          <textarea
-            className="h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 outline-none transition placeholder:text-slate-400 focus:border-[#6C63FF] focus:ring-2 focus:ring-[#6C63FF]/10"
-            placeholder="粘贴目标职位 JD，检查匹配度..."
-            value={jdInput}
-            onChange={(e) => setJdInput(e.target.value)}
-          />
-
-          <button
-            onClick={handleJDMatch}
-            disabled={!jdInput.trim() || jdLoading}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white py-1.5 text-xs font-medium text-slate-500 transition hover:border-[#6C63FF]/30 hover:text-[#6C63FF] disabled:opacity-40"
-          >
-            {jdLoading ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Loader2 size={12} className="animate-spin" />
-                AI 分析中...
-              </span>
-            ) : (
-              "检测匹配度"
-            )}
-          </button>
-
-          {jdMatch && (
-            <div className="mt-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">匹配度</span>
-                <span className="text-lg font-black text-[#6C63FF]">{jdMatch.score}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-                  style={{ width: `${jdMatch.score}%` }}
-                />
-              </div>
-              {jdMatch.matchedSkills.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-[10px] font-medium text-slate-400">匹配关键词</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {jdMatch.matchedSkills.map((skill) => (
-                      <span key={skill} className="rounded-full bg-[#6C63FF]/5 px-2.5 py-1 text-[10px] font-medium text-[#6C63FF]">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {jdMatch.suggestion && (
-                <p className="rounded-lg bg-amber-50 p-2 text-[10px] leading-4 text-amber-700">
-                  {jdMatch.suggestion}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* AI 优化确认弹窗 — 与表单/预览联动 */}
-      <Modal open={optimizeOpen} onClose={() => setOptimizeOpen(false)} title="AI 优化建议">
-        {optimizeLoading ? (
-          <div className="flex flex-col items-center gap-4 py-8">
-            <Loader2 size={40} className="animate-spin text-[#6C63FF]" />
-            <p className="text-sm text-slate-500">AI 正在分析你的简历...</p>
-          </div>
-        ) : optimizeList.length > 0 ? (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-400">
-              已应用 <span className="font-bold text-[#6C63FF]">{appliedCount}</span> / {optimizeList.length} 条建议，表单和预览已实时更新
-            </p>
-            {optimizeList.map((sug) => {
-              const applied = appliedIds.has(sug.id);
-              return (
-                <div key={sug.id} className={`rounded-xl border p-4 transition ${applied ? "border-emerald-200 bg-emerald-50/50" : "border-slate-100 bg-white"}`}>
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-slate-400">{sug.module} · {sug.field}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      sug.priority === "高" ? "bg-red-100 text-red-600" : sug.priority === "中" ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"
-                    }`}>
-                      {sug.priority}优先级
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-ink">{sug.title}</p>
-                  <div className="mt-2 space-y-1.5 text-xs">
-                    <div className="rounded-lg bg-red-50 p-2">
-                      <span className="font-medium text-red-500">原文</span>
-                      <span className="ml-1 text-slate-500 line-through">{sug.original}</span>
-                    </div>
-                    <div className="rounded-lg bg-emerald-50 p-2">
-                      <span className="font-medium text-emerald-600">优化</span>
-                      <span className="ml-1 text-slate-700">{sug.suggested}</span>
-                    </div>
-                  </div>
-                  <button
-                    className={`mt-3 w-full rounded-lg py-2 text-xs font-bold transition ${
-                      applied
-                        ? "border border-emerald-200 bg-emerald-50 text-emerald-500 cursor-default"
-                        : "bg-[#6C63FF] text-white hover:bg-[#5A52E0]"
-                    }`}
-                    onClick={() => applySuggestion(sug)}
-                    disabled={applied}
-                  >
-                    {applied ? (
-                      <span className="inline-flex items-center gap-1"><Check size={12} />已应用到表单</span>
-                    ) : (
-                      "应用到简历"
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-
-            {!allApplied && (
-              <button
-                className="w-full rounded-xl bg-gradient-to-r from-[#6C63FF] to-[#a78bfa] py-2.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(108,99,255,0.25)] transition hover:shadow-[0_6px_20px_rgba(108,99,255,0.35)]"
-                onClick={applyAll}
-              >
-                ⚡ 一键全部应用
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="py-8 text-center text-sm text-slate-400">
-            暂无优化建议，请先完善简历内容
-          </div>
-        )}
-      </Modal>
-    </>
+    </div>
   );
 }

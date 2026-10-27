@@ -1,4 +1,4 @@
-export type ThemeColor = "orange" | "blue" | "purple" | "green" | "rose" | "custom";
+export type ThemeColor = "graphite" | "orange" | "blue" | "purple" | "green" | "rose" | "custom";
 
 interface ColorPalette {
   "50": string;
@@ -9,6 +9,7 @@ interface ColorPalette {
 }
 
 const PALETTES: Record<Exclude<ThemeColor, "custom">, ColorPalette> = {
+  graphite: { "50": "#f5f5f5", "100": "#e5e5e5", "500": "#333333", "600": "#262626", "700": "#171717" },
   orange: { "50": "#fff3ed", "100": "#ffe3d4", "500": "#FF5C00", "600": "#e84f00", "700": "#bd3f00" },
   blue: { "50": "#eff6ff", "100": "#dbeafe", "500": "#3B82F6", "600": "#2563eb", "700": "#1d4ed8" },
   purple: { "50": "#f5f3ff", "100": "#ede9fe", "500": "#8B5CF6", "600": "#7c3aed", "700": "#6d28d9" },
@@ -65,7 +66,7 @@ export function getStoredTheme(): ThemeColor {
     if (stored === "custom") return "custom";
     if (stored && stored in PALETTES) return stored as ThemeColor;
   } catch { /* ignore */ }
-  return "orange";
+  return "graphite";
 }
 
 export function applyTheme(color: ThemeColor, customHex?: string) {

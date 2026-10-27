@@ -4,7 +4,6 @@ import { useResumeStore } from "../store/resumeStore";
 import { defaultResume } from "../data/defaultResume";
 import type { ResumeData } from "../types/resume";
 import { useT } from "../i18n";
-import { applyTheme, getStoredTheme, getStoredCustomColor, type ThemeColor } from "../utils/theme";
 import { calcATSScore } from "../utils/atsScore";
 import { sendEmailCode, loginByEmail, saveUser, loadUser, clearUser, type UserInfo } from "../utils/auth";
 import { ConfirmDialog, PromptDialog } from "./Dialogs";
@@ -162,9 +161,6 @@ export function Sidebar() {
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   // Settings states
-  const [themeColor, setThemeColor] = useState<ThemeColor>(getStoredTheme);
-  const [customColor, setCustomColor] = useState<string>(getStoredCustomColor);
-  const colorInputRef = useRef<HTMLInputElement>(null);
   const [aiModel, setAiModel] = useState<string>(() => {
     try { return localStorage.getItem("offerforge-ai-model") || "flash"; } catch { return "flash"; }
   });
@@ -325,10 +321,10 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden h-screen w-[280px] shrink-0 overflow-y-auto border-r border-slate-100 bg-[#F6F8FB] p-6 lg:block">
+      <aside className="resume-library p-4">
         {/* Logo */}
         <div className="mb-8 flex items-center gap-4">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-orange-400 text-xl font-black text-white">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-neutral-700 to-neutral-600 text-xl font-black text-white">
             O
           </div>
           <div>
@@ -385,7 +381,7 @@ export function Sidebar() {
           )}
 
           {/* Current resume card */}
-          <div className="rounded-xl bg-gradient-to-br from-brand-500 to-orange-400 p-4 text-white shadow-glow">
+          <div className="rounded-xl bg-gradient-to-br from-neutral-700 to-neutral-600 p-4 text-white shadow-glow">
             <h3 className="text-base font-bold">{resume.title}</h3>
             <p className="mt-1 text-xs text-white/85">{resume.subtitle}</p>
             <div className="mt-3 flex gap-2">
@@ -512,43 +508,6 @@ export function Sidebar() {
 
           <div className="my-5 h-px bg-slate-100" />
 
-          {/* Module 4: Daily Tip */}
-          <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Lightbulb size={16} className="text-blue-500" />
-              <span className="text-sm font-bold text-blue-500">{t("sidebar.dailyTip")}</span>
-            </div>
-            <p className="text-xs leading-5 text-slate-600">{t(tipKey as any)}</p>
-          </div>
-
-          {/* Pro Upgrade */}
-          <div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-            <div className="flex items-center gap-2">
-              <Crown size={18} className="text-amber-500" />
-              <h4 className="text-sm font-bold text-amber-700">{t("sidebar.upgradePro")}</h4>
-            </div>
-            <ul className="mt-3 space-y-1.5 text-xs leading-5 text-slate-600">
-              <li className="flex items-center gap-1.5">
-                <ChevronRight size={12} className="text-amber-400" />
-                {t("sidebar.proFeature1")}
-              </li>
-              <li className="flex items-center gap-1.5">
-                <ChevronRight size={12} className="text-amber-400" />
-                {t("sidebar.proFeature2")}
-              </li>
-              <li className="flex items-center gap-1.5">
-                <ChevronRight size={12} className="text-amber-400" />
-                {t("sidebar.proFeature3")}
-              </li>
-            </ul>
-            <button
-              className="mt-4 h-11 w-full rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
-              onClick={() => { if (userInfo) { setProOpen(true); } else { setLoginOpen(true); } }}
-            >
-              {t("sidebar.upgradeNow")}
-            </button>
-          </div>
-
           {/* Login State Block */}
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             {userInfo ? (
@@ -581,7 +540,7 @@ export function Sidebar() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-500">未登录</p>
-                    <p className="text-xs text-slate-400">同步数据到云端</p>
+                    <p className="text-xs text-slate-400">登录后使用账户功能</p>
                   </div>
                 </div>
                 <button
@@ -641,9 +600,7 @@ export function Sidebar() {
           <button
             className="h-11 w-full rounded-xl bg-amber-500 text-sm font-bold text-white transition hover:bg-amber-600"
             onClick={() => {
-              const payUrl = `https://pay.yoursite.com/checkout?plan=${proPlan}&model=${aiModel}`;
-              window.open(payUrl, "_blank");
-              showToast(t("sidebar.subThanks"), "success");
+              showToast("会员支付尚未配置，请联系管理员开通。", "info");
               setProOpen(false);
             }}
           >
@@ -720,53 +677,10 @@ export function Sidebar() {
 
           <div className="h-px bg-slate-100" />
 
-          {/* Theme Color */}
           <div className="py-4">
-            <p className="text-sm font-bold text-slate-700">{t("settings.theme")}</p>
-            <p className="mt-1 text-xs text-slate-400">{t("settings.themeDesc")}</p>
-            <div className="mt-3 flex items-center gap-2">
-              {([
-                { key: "orange", color: "#FF5C00", ring: "ring-orange-400" },
-                { key: "blue", color: "#3B82F6", ring: "ring-blue-400" },
-                { key: "purple", color: "#8B5CF6", ring: "ring-purple-400" },
-                { key: "green", color: "#10B981", ring: "ring-emerald-400" },
-                { key: "rose", color: "#EC4899", ring: "ring-pink-400" }
-              ] as const).map(({ key, color, ring }) => (
-                <button
-                  key={key}
-                  className={`h-9 w-9 rounded-full border-2 transition ${
-                    themeColor === key
-                      ? `border-white ring-2 ${ring} scale-110`
-                      : "border-transparent hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => { setThemeColor(key); applyTheme(key); }}
-                  title={key}
-                />
-              ))}
-              {/* Divider */}
-              <span className="mx-1 h-6 w-px bg-slate-200" />
-              {/* Custom color picker */}
-              <input
-                ref={colorInputRef}
-                type="color"
-                value={customColor}
-                onChange={(e) => {
-                  const hex = e.target.value;
-                  setCustomColor(hex);
-                  setThemeColor("custom");
-                  applyTheme("custom", hex);
-                }}
-                className={`h-9 w-9 cursor-pointer rounded-full border-2 p-0 transition hover:scale-105 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none ${
-                  themeColor === "custom"
-                    ? "border-white ring-2 ring-slate-400 scale-110"
-                    : "border-slate-200"
-                }`}
-                title="自定义颜色"
-              />
-            </div>
+            <p className="text-sm font-bold text-neutral-700">界面外观</p>
+            <p className="mt-2 text-xs leading-5 text-neutral-500">白色与浅灰色工作区，简历使用黑白单栏排版。</p>
           </div>
-
           <div className="h-px bg-slate-100" />
 
           {/* AI Model Preference */}

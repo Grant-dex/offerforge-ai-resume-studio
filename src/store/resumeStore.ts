@@ -44,10 +44,10 @@ const normalizeResume = (resume?: Partial<ResumeData>): ResumeData => {
       description: resume?.education?.description ?? ""
     },
     skills: Array.isArray(resume?.skills) ? resume.skills : defaultResume.skills,
-    work: Array.isArray(resume?.work) && resume.work.length > 0
+    work: Array.isArray(resume?.work)
       ? resume.work.map((w) => ({ ...w, tags: Array.isArray((w as any).tags) ? (w as any).tags : [] }))
       : defaultResume.work,
-    projects: Array.isArray(resume?.projects) && resume.projects.length > 0
+    projects: Array.isArray(resume?.projects)
       ? resume.projects.map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }))
       : defaultResume.projects
   };
@@ -121,7 +121,7 @@ export const useResumeStore = create<ResumeState>()(
           lastTouched: now(),
           resume: withATS({ ...state.resume, skills })
         })),
-      setTemplate: (template) => set({ template }),
+      setTemplate: (template) => set({ template, lastTouched: now() }),
       loadTemplate: (template) =>
         set({
           template,
@@ -142,7 +142,7 @@ export const useResumeStore = create<ResumeState>()(
         return {
           ...current,
           ...saved,
-          template: saved?.template ?? current.template,
+          template: saved?.template && ["focus", "stack", "lead"].includes(saved.template) ? saved.template : current.template,
           lastTouched: saved?.lastTouched ?? current.lastTouched,
           resume: normalizeResume(saved?.resume)
         };

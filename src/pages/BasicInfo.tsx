@@ -1,244 +1,199 @@
-import { Camera, CheckCircle2, ChevronDown } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Camera, Check, Plus, X } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { useResumeStore } from "../store/resumeStore";
 import { useT } from "../i18n";
 import { showToast } from "../components/Toast";
 import { chinaCities } from "../data/chinaCities";
 
+const inputStyle = "w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-100";
+const buttonFocus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2";
+
 export function BasicInfo() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const resume = useResumeStore((state) => state.resume);
   const updatePersonal = useResumeStore((state) => state.updatePersonal);
   const fileRef = useRef<HTMLInputElement>(null);
+  const zh = locale === "zh";
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      showToast("头像文件不能超过 2MB", "error");
+      showToast(zh ? "头像文件不能超过 2MB" : "Photo must be smaller than 2 MB", "error");
       return;
     }
     if (!file.type.startsWith("image/")) {
-      showToast("请选择图片文件", "error");
+      showToast(zh ? "请选择图片文件" : "Please choose an image file", "error");
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
-      updatePersonal({ avatar: reader.result as string });
-    };
+    reader.onload = () => updatePersonal({ avatar: reader.result as string });
+    reader.onerror = () => showToast(zh ? "图片读取失败，请重试" : "Unable to read this image. Please try again.", "error");
     reader.readAsDataURL(file);
   };
 
   return (
-    <div>
+    <div className="min-w-0">
       <StepHeading title={t("basic.title")} subtitle={t("basic.subtitle")} />
-
-      <div className="mb-6 flex items-center gap-6">
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+      <div className="mb-6 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <input ref={fileRef} type="file" accept="image/*" aria-label={t("basic.uploadAvatar")} className="hidden" onChange={handleAvatarUpload} />
         <button
-          className="group relative flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-brand-300 hover:bg-brand-50"
+          type="button"
+          aria-label={t("basic.uploadAvatar")}
+          className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white text-slate-500 transition hover:border-slate-500 ${buttonFocus}`}
           onClick={() => fileRef.current?.click()}
         >
-          {resume.personal.avatar ? (
-            <img src={resume.personal.avatar} alt="头像" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex flex-col items-center gap-1 text-slate-400 group-hover:text-brand-500">
-              <Camera size={20} />
-              <span className="text-[10px] font-medium">{t("basic.uploadAvatar")}</span>
-            </div>
-          )}
+          {resume.personal.avatar ? <img src={resume.personal.avatar} alt={t("basic.avatarLabel")} className="h-full w-full object-cover" /> : <Camera size={22} />}
         </button>
-        <div>
-          <p className="text-sm font-bold text-slate-700">{t("basic.avatarLabel")}</p>
-          <p className="mt-1 text-xs text-slate-400">{t("basic.avatarHint")}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800">{t("basic.avatarLabel")} <span className="font-normal text-slate-400">{zh ? "（选填）" : "(optional)"}</span></p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{zh ? "点击上传图片，大小不超过 2MB" : "Upload an image up to 2 MB"}</p>
           {resume.personal.avatar && (
-            <button
-              className="mt-2 text-xs font-medium text-red-500 hover:text-red-600"
-              onClick={() => updatePersonal({ avatar: "" })}
-            >
+            <button type="button" className={`mt-1 rounded text-xs text-slate-600 underline underline-offset-4 hover:text-slate-900 ${buttonFocus}`} onClick={() => updatePersonal({ avatar: "" })}>
               {t("basic.removeAvatar")}
             </button>
           )}
         </div>
       </div>
-
-      <h3 className="mb-4 text-xl font-black text-ink">{t("basic.personalInfo")}</h3>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label={t("basic.resumeName")} value={resume.personal.resumeTitle} onChange={(resumeTitle) => updatePersonal({ resumeTitle })} />
-        <Field label={t("basic.targetRole")} value={resume.personal.role} onChange={(role) => updatePersonal({ role })} />
-        <Field label={t("basic.name")} value={resume.personal.name} onChange={(name) => updatePersonal({ name })} />
-        <Field label={t("basic.seniority")} value={resume.personal.seniority} onChange={(seniority) => updatePersonal({ seniority })} />
-        <Field label={t("basic.phone")} value={resume.personal.phone} onChange={(phone) => updatePersonal({ phone })} />
-        <Field label={t("basic.email")} value={resume.personal.email} onChange={(email) => updatePersonal({ email })} />
+      <div className="grid min-w-0 grid-cols-1 gap-4">
+        <Field label={t("basic.resumeName")} value={resume.personal.resumeTitle} onChange={(resumeTitle) => updatePersonal({ resumeTitle })} placeholder={zh ? "例如：产品经理 · 社招简历" : "e.g. Product Manager Resume"} />
+        <Field label={t("basic.targetRole")} value={resume.personal.role} onChange={(role) => updatePersonal({ role })} placeholder={zh ? "填写本次投递的岗位" : "Role you are applying for"} />
+        <Field label={t("basic.name")} value={resume.personal.name} onChange={(name) => updatePersonal({ name })} autoComplete="name" />
+        <Field label={zh ? "经验概述" : t("basic.seniority")} value={resume.personal.seniority} onChange={(seniority) => updatePersonal({ seniority })} placeholder={zh ? "例如：3 年前端开发经验 / 2026 届应届生" : "e.g. 3 years in frontend development"} />
+        <Field label={t("basic.phone")} type="tel" value={resume.personal.phone} onChange={(phone) => updatePersonal({ phone })} autoComplete="tel" />
+        <Field label={t("basic.email")} type="email" value={resume.personal.email} onChange={(email) => updatePersonal({ email })} autoComplete="email" />
         <CityPicker value={resume.personal.city} onChange={(city) => updatePersonal({ city })} />
+        <label className="block min-w-0">
+          <span className="mb-2 block text-xs font-semibold text-slate-600">{t("basic.summary")}</span>
+          <textarea
+            className={`${inputStyle} min-h-[132px] resize-y leading-7`}
+            value={resume.personal.summary}
+            placeholder={zh ? "用 2–3 句话概括你的经验、核心能力和代表性成果。" : "Summarize your experience, strengths and key achievements in 2–3 sentences."}
+            onChange={(event) => updatePersonal({ summary: event.target.value })}
+          />
+          <span className="mt-1.5 block text-xs leading-5 text-slate-400">{zh ? "优先写与目标岗位相关的事实和成果。" : "Focus on facts and achievements relevant to the role."}</span>
+        </label>
       </div>
-      <label className="mt-4 block">
-        <span className="mb-2 block text-sm font-semibold text-slate-600">{t("basic.summary")}</span>
-        <textarea
-          className="input min-h-[110px] resize-none py-3"
-          value={resume.personal.summary}
-          onChange={(event) => updatePersonal({ summary: event.target.value })}
-        />
-      </label>
     </div>
   );
 }
 
-export function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const filled = value.trim().length > 0;
+export function Field({ label, value, onChange, placeholder, type = "text", autoComplete }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: "text" | "tel" | "email";
+  autoComplete?: string;
+}) {
   return (
-    <label className="group block rounded-xl border border-slate-100 bg-white p-4 transition focus-within:border-brand-500">
-      <span className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-        {label}
-        <CheckCircle2 size={16} className={filled ? "text-emerald-500" : "text-slate-200"} />
-      </span>
-      <input className="w-full border-0 bg-transparent text-sm font-semibold text-ink outline-none" value={value} onChange={(event) => onChange(event.target.value)} />
+    <label className="block min-w-0">
+      <span className="mb-2 block text-xs font-semibold text-slate-600">{label}</span>
+      <input className={inputStyle} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
 
 export function StepHeading({ title, subtitle }: { title: string; subtitle: string }) {
-  const { t } = useT();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const routes = ["/basic", "/work", "/projects", "/skills", "/export"];
-  const currentIndex = Math.max(0, routes.indexOf(location.pathname));
-  const prev = routes[Math.max(0, currentIndex - 1)];
-  const next = routes[Math.min(routes.length - 1, currentIndex + 1)];
-
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-bold tracking-tight text-ink">{title}</h2>
-      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-brand-300 hover:text-brand-500 disabled:opacity-30 leading-none"
-          disabled={currentIndex === 0}
-          onClick={() => navigate(prev)}
-        >
-          ← {t("basic.prev")}
-        </button>
-        <button
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-brand-300 hover:text-brand-500 disabled:opacity-30 leading-none"
-          disabled={currentIndex === routes.length - 1}
-          onClick={() => navigate(next)}
-        >
-          {t("basic.next")}
-        </button>
-        <span className="ml-auto text-[11px] text-slate-300">
-          {currentIndex + 1} / {routes.length}
-        </span>
-      </div>
-    </div>
+    <header className="mb-6">
+      <h2 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
+      <p className="mt-1.5 text-xs leading-6 text-slate-500">{subtitle}</p>
+    </header>
   );
 }
 
 function CityPicker({ value, onChange }: { value: string; onChange: (city: string) => void }) {
-  const parsed = useMemo(() => {
-    const parts = value ? value.split(/\s+|\s*·\s*/).filter(Boolean) : [];
-    return { province: parts[0] || "", city: parts[1] || "" };
-  }, [value]);
-
-  const [provinceOpen, setProvinceOpen] = useState(false);
-  const [cityOpen, setCityOpen] = useState(false);
-
-  const selectedProvince = chinaCities.find((p) => p.province === parsed.province);
-  const cities = selectedProvince?.cities ?? [];
-
-  const handleProvinceSelect = (province: string) => {
-    onChange(province);
-    setProvinceOpen(false);
-  };
-
-  const handleCitySelect = (city: string) => {
-    onChange(`${parsed.province} ${city}`);
-    setCityOpen(false);
-  };
-
+  const { t, locale } = useT();
+  const listId = useId();
   return (
-    <div className="group block rounded-xl border border-slate-100 bg-white p-4 transition focus-within:border-brand-500">
-      <span className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-        所在城市
-        <CheckCircle2 size={16} className={parsed.province ? "text-emerald-500" : "text-slate-200"} />
-      </span>
-      <div className="flex gap-2">
-        {/* Province */}
-        <div className="relative flex-1">
-          <button
-            className="flex h-full w-full items-center justify-between rounded-lg bg-transparent text-sm font-semibold text-ink outline-none"
-            onClick={() => { setProvinceOpen(!provinceOpen); setCityOpen(false); }}
-          >
-            <span className={parsed.province ? "text-ink" : "text-slate-400"}>{parsed.province || "选择省份"}</span>
-            <ChevronDown size={14} className={`text-slate-400 transition ${provinceOpen ? "rotate-180" : ""}`} />
-          </button>
-          {provinceOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 max-h-48 w-36 overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-lg">
-              {chinaCities.map((p) => (
-                <button
-                  key={p.province}
-                  className={`block w-full px-3 py-2 text-left text-xs transition hover:bg-brand-50 ${
-                    parsed.province === p.province ? "bg-brand-50 font-semibold text-brand-600" : "text-slate-600"
-                  }`}
-                  onClick={() => handleProvinceSelect(p.province)}
-                >
-                  {p.province}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* City */}
-        <div className="relative flex-1">
-          <button
-            className="flex h-full w-full items-center justify-between rounded-lg bg-transparent text-sm font-semibold outline-none"
-            onClick={() => { setCityOpen(!cityOpen); setProvinceOpen(false); }}
-            disabled={!parsed.province}
-          >
-            <span className={parsed.city ? "text-ink" : "text-slate-400"}>
-              {parsed.city || (parsed.province ? "选择城市" : "请先选省份")}
-            </span>
-            <ChevronDown size={14} className={`text-slate-400 transition ${cityOpen ? "rotate-180" : ""}`} />
-          </button>
-          {cityOpen && cities.length > 0 && (
-            <div className="absolute left-0 top-full z-50 mt-1 max-h-48 w-36 overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-lg">
-              {cities.map((city) => (
-                <button
-                  key={city}
-                  className={`block w-full px-3 py-2 text-left text-xs transition hover:bg-brand-50 ${
-                    parsed.city === city ? "bg-brand-50 font-semibold text-brand-600" : "text-slate-600"
-                  }`}
-                  onClick={() => handleCitySelect(city)}
-                >
-                  {city}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+    <label className="block min-w-0">
+      <span className="mb-2 block text-xs font-semibold text-slate-600">{t("basic.city")}</span>
+      <input
+        className={inputStyle}
+        list={listId}
+        value={value}
+        placeholder={locale === "zh" ? "输入或选择所在城市" : "Type or select a city"}
+        autoComplete="address-level2"
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <datalist id={listId}>
+        {chinaCities.flatMap(({ province, cities }) => cities.map((city) => <option key={`${province}-${city}`} value={province === city ? city : `${province} ${city}`} />))}
+      </datalist>
+    </label>
+  );
+}
+
+export function TagEditor({ tags, onUpdate, label, placeholder }: {
+  tags: string[];
+  onUpdate: (tags: string[]) => void;
+  label: string;
+  placeholder?: string;
+}) {
+  const { locale } = useT();
+  const zh = locale === "zh";
+  const [input, setInput] = useState("");
+  const inputId = useId();
+  const addTags = (value: string) => {
+    const newTags = value.split(/[,，\n]/).map((tag) => tag.trim()).filter(Boolean);
+    if (newTags.length) onUpdate([...new Set([...tags, ...newTags])]);
+    setInput("");
+  };
+  return (
+    <div className="min-w-0">
+      <label htmlFor={inputId} className="mb-2 block text-xs font-semibold text-slate-600">{label}</label>
+      {tags.length > 0 && <div className="mb-3 flex flex-wrap gap-2">
+        {[...new Set(tags)].map((tag) => (
+          <span key={tag} className="inline-flex max-w-full items-center gap-1 rounded-md border border-slate-200 bg-slate-50 py-1 pl-2.5 pr-1.5 text-xs text-slate-600">
+            <span className="min-w-0 break-words">{tag}</span>
+            <button type="button" aria-label={zh ? `移除标签 ${tag}` : `Remove tag ${tag}`} className={`shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 ${buttonFocus}`} onClick={() => onUpdate(tags.filter((item) => item !== tag))}>
+              <X size={13} />
+            </button>
+          </span>
+        ))}
+      </div>}
+      <div className="flex min-w-0 gap-2">
+        <input
+          id={inputId}
+          className={`${inputStyle} flex-1`}
+          placeholder={placeholder || (zh ? "输入标签，回车添加" : "Type a tag, press Enter")}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+            if (event.key === "Enter" || event.key === "," || event.key === "，") {
+              event.preventDefault();
+              addTags(input);
+            }
+          }}
+        />
+        <button type="button" className={`inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 ${buttonFocus}`} onClick={() => addTags(input)} disabled={!input.trim()}>
+          <Plus size={14} />{zh ? "添加" : "Add"}
+        </button>
       </div>
-      {/* Close dropdowns on outside click */}
-      {(provinceOpen || cityOpen) && (
-        <div className="fixed inset-0 z-40" onClick={() => { setProvinceOpen(false); setCityOpen(false); }} />
-      )}
     </div>
   );
 }
 
-// ── Template Card Component ────────────────────────────────────────────
-export function TemplateCard({
-  active,
-  onClick,
-  badge,
-  title,
-  subtitle,
-  description,
-  gradient,
-  accent,
-  activeBorder,
-  disabled,
-  children
-}: {
+export function BulletEditor({ label, bullets, onChange, placeholder }: { label: string; bullets: string[]; onChange: (bullets: string[]) => void; placeholder?: string }) {
+  const { locale } = useT();
+  return (
+    <label className="block min-w-0">
+      <span className="mb-2 block text-xs font-semibold text-slate-600">{label}</span>
+      <textarea
+        className={`${inputStyle} min-h-[180px] resize-y leading-7`}
+        value={bullets.join("\n")}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value.split("\n"))}
+      />
+      <span className="mt-1.5 block text-xs leading-5 text-slate-400">{locale === "zh" ? "每行一项，写清你的行动和实际成果。" : "One point per line. Describe your actions and results."}</span>
+    </label>
+  );
+}
+
+// Retain the existing public props for any template-selection consumers.
+export function TemplateCard({ active, onClick, badge, title, subtitle, description, disabled, children }: {
   active: boolean;
   onClick: () => void;
   badge: string;
@@ -251,65 +206,17 @@ export function TemplateCard({
   disabled?: boolean;
   children: React.ReactNode;
 }) {
+  const { locale } = useT();
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`group relative flex flex-col overflow-hidden rounded-[34px] border bg-white p-7 text-left transition-all duration-500 ${
-        active
-          ? `${activeBorder} border bg-gradient-to-br ${gradient} shadow-[0_24px_60px_-24px_rgba(15,23,42,0.16)] ring-1`
-          : disabled
-            ? "border-slate-100 opacity-60 cursor-not-allowed"
-            : "border-slate-200/80 shadow-[0_10px_28px_-18px_rgba(15,23,42,0.14)] hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_28px_60px_-24px_rgba(15,23,42,0.16)]"
-      }`}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_rgba(255,255,255,0.78)_38%,_transparent_72%)] opacity-95" />
-
-      {/* Badge */}
-      <div className="absolute right-5 top-5 z-10">
-        <span
-          className={`rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide backdrop-blur ${
-            badge === "PRO"
-              ? "bg-amber-100/90 text-amber-700 border border-amber-200"
-              : badge === "COMING SOON"
-                ? "bg-slate-100/90 text-slate-500 border border-slate-200"
-                : "bg-white/80 text-slate-500 border border-slate-100"
-          }`}
-        >
-          {badge}
-        </span>
+    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={active} className={`relative flex min-w-0 flex-col rounded-xl border bg-white p-5 text-left transition ${buttonFocus} ${active ? "border-slate-700 ring-1 ring-slate-700" : "border-slate-200 hover:border-slate-400"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+      <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+        <span>{badge}</span>
+        {active && <Check size={16} className="text-slate-800" />}
       </div>
-
-      {/* Active check */}
-      {active && (
-        <div className="absolute left-5 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#FF6A00] text-white shadow-[0_4px_12px_rgba(255,106,0,0.35)]">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
-      )}
-
-      {/* Illustration area */}
-      <div
-        className={`relative z-[1] mb-5 flex h-[146px] items-center justify-center overflow-hidden rounded-[28px] border bg-gradient-to-br ${gradient}`}
-        style={{ borderColor: active ? accent : "rgba(226,232,240,0.85)" }}
-      >
-        <div className="absolute inset-x-6 top-5 h-px bg-white/80" />
-        <div className="absolute inset-x-6 bottom-5 h-px bg-white/35" />
-        {children}
-      </div>
-
-      {/* Text content */}
-      <div className="relative z-[1] mb-2 flex items-center gap-2.5">
-        <h3 className="text-[17px] font-black tracking-tight text-slate-900">{title}</h3>
-        <span className="text-sm font-bold" style={{ color: accent }}>{subtitle}</span>
-        <span className={`ml-auto flex h-5 items-center rounded-full px-2 text-[10px] font-bold ${
-          active ? "bg-[#FFF0E5] text-[#FF6A00]" : "bg-slate-100 text-slate-400"
-        }`}>
-          {active ? "当前" : "可选"}
-        </span>
-      </div>
-      <p className="relative z-[1] text-[13px] leading-7 text-slate-400">{description}</p>
+      <div className="mb-4 flex h-36 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">{children}</div>
+      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+      <p className="mt-1 text-xs text-slate-600">{subtitle}{active ? (locale === "zh" ? " · 当前使用" : " · Selected") : ""}</p>
+      <p className="mt-2 text-xs leading-6 text-slate-500">{description}</p>
     </button>
   );
 }
