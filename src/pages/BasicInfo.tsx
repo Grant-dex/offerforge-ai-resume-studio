@@ -3,6 +3,7 @@ import { useId, useRef, useState } from "react";
 import { useResumeStore } from "../store/resumeStore";
 import { useT } from "../i18n";
 import { showToast } from "../components/Toast";
+import { isValidEmail } from "../utils/formValidation";
 import { chinaCities } from "../data/chinaCities";
 
 const inputStyle = "w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-100";
@@ -62,7 +63,7 @@ export function BasicInfo() {
         <Field label={t("basic.name")} value={resume.personal.name} onChange={(name) => updatePersonal({ name })} autoComplete="name" />
         <Field label={zh ? "经验概述" : t("basic.seniority")} value={resume.personal.seniority} onChange={(seniority) => updatePersonal({ seniority })} placeholder={zh ? "例如：3 年前端开发经验 / 2026 届应届生" : "e.g. 3 years in frontend development"} />
         <Field label={t("basic.phone")} type="tel" value={resume.personal.phone} onChange={(phone) => updatePersonal({ phone })} autoComplete="tel" />
-        <Field label={t("basic.email")} type="email" value={resume.personal.email} onChange={(email) => updatePersonal({ email })} autoComplete="email" />
+        <Field label={t("basic.email")} type="email" error={resume.personal.email.trim() && !isValidEmail(resume.personal.email) ? (zh ? "邮箱格式不正确，请检查，如 name@example.com。" : "Check the email address, e.g. name@example.com.") : ""} value={resume.personal.email} onChange={(email) => updatePersonal({ email })} autoComplete="email" />
         <CityPicker value={resume.personal.city} onChange={(city) => updatePersonal({ city })} />
         <label className="block min-w-0">
           <span className="mb-2 block text-xs font-semibold text-slate-600">{t("basic.summary")}</span>
@@ -79,18 +80,24 @@ export function BasicInfo() {
   );
 }
 
-export function Field({ label, value, onChange, placeholder, type = "text", autoComplete }: {
+export function Field({ label, value, onChange, placeholder, type = "text", autoComplete, error, disabled }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   type?: "text" | "tel" | "email";
   autoComplete?: string;
+  error?: string;
+  disabled?: boolean;
 }) {
+  const errorId = useId();
+  const [focused, setFocused] = useState(false);
+  const visibleError = !focused && !disabled ? error : "";
   return (
     <label className="block min-w-0">
       <span className="mb-2 block text-xs font-semibold text-slate-600">{label}</span>
-      <input className={inputStyle} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} />
+      <input aria-label={label} disabled={disabled} aria-invalid={!!visibleError} aria-describedby={visibleError ? errorId : undefined} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={`${inputStyle} ${visibleError ? "border-amber-500" : ""} disabled:bg-neutral-50 disabled:text-neutral-500`} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} />
+      {visibleError && <span id={errorId} className="mt-1.5 block text-xs leading-5 text-amber-800">{visibleError}</span>}
     </label>
   );
 }

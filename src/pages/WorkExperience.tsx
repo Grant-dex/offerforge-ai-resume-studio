@@ -1,3 +1,4 @@
+import { DateRangeFields } from "../components/DateRangeFields";
 import { ExperienceEditor } from "../components/ExperienceEditor";
 import { dateRange } from "../data/resumeTemplates";
 import { useResumeStore } from "../store/resumeStore";
@@ -22,10 +23,7 @@ export function WorkExperiencePage() {
         <Field value={item.company} label={t("work.company")} onChange={company => updateWork(item.id, { company })}/>
         <Field value={item.title} label={zh ? "职位名称" : t("work.jobTitle")} onChange={title => updateWork(item.id, { title })}/>
         <Field value={item.city} label={t("work.city")} onChange={city => updateWork(item.id, { city })}/>
-        <div className="grid min-w-0 grid-cols-2 gap-3">
-          <Field value={item.startDate} label={t("work.startDate")} placeholder="2023-06" onChange={startDate => updateWork(item.id, { startDate })}/>
-          <Field value={item.endDate} label={zh ? "结束时间" : "End date"} placeholder={zh ? "2025-09 / 至今" : "2025-09 / Present"} onChange={endDate => updateWork(item.id, { endDate })}/>
-        </div>
+        <DateRangeFields startDate={item.startDate} endDate={item.endDate} zh={zh} onChange={patch => updateWork(item.id, patch)} />
         <BulletEditor label={zh ? "工作内容与成果" : "Responsibilities & achievements"} bullets={item.bullets} onChange={bullets => updateWork(item.id, { bullets })} placeholder={zh ? "负责什么工作、采取什么行动、取得什么结果？\n如有数据，请填写你能够核实的成果。" : "What did you own, what action did you take, and what changed?\nInclude results you can verify."}/>
         <TagEditor label={t("work.keywordTags")} tags={item.tags} onUpdate={tags => updateWork(item.id, { tags })} placeholder={t("work.tagPlaceholder")}/>
       </>}

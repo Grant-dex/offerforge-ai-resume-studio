@@ -1,3 +1,4 @@
+import { isValidEmail, validateExperienceDates } from "../utils/formValidation";
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Download, FileText, Link2, Loader2 } from "lucide-react";
 import { useShallow } from "zustand/shallow";
@@ -24,9 +25,9 @@ export function PreviewExportPage() {
     return () => { shareRequest.current += 1; };
   }, [resume, template, shareOptions]);
   const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-  const contactsComplete = !!(resume.personal.name.trim() && resume.personal.phone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resume.personal.email));
-  const invalidWorkDates = resume.work.some((item) => item.startDate && item.endDate && /^\d{4}-/.test(item.endDate) && item.startDate > item.endDate);
-  const invalidProjectDates = resume.projects.some((item) => item.startDate && item.endDate && /^\d{4}-/.test(item.endDate) && item.startDate > item.endDate);
+  const contactsComplete = !!(resume.personal.name.trim() && resume.personal.phone.trim() && isValidEmail(resume.personal.email));
+  const invalidWorkDates = resume.work.some(item => validateExperienceDates(item.startDate, item.endDate).invalid);
+  const invalidProjectDates = resume.projects.some(item => validateExperienceDates(item.startDate, item.endDate).invalid);
   const hasInvalidDates = invalidWorkDates || invalidProjectDates;
   const download = async (format: "pdf" | "word") => {
     if (busy) return;
@@ -71,7 +72,7 @@ export function PreviewExportPage() {
         <h2 className="mb-3 text-sm font-semibold text-neutral-800">投递前检查</h2>
         <div className="divide-y divide-neutral-100">
           <CheckRow complete={contactsComplete} title="联系信息" description={contactsComplete ? "姓名、电话、邮箱已填写，请再核对一遍。" : "请补全姓名、电话与有效的邮箱。"} action={() => navigate("/basic")} />
-          <CheckRow complete={!hasInvalidDates} title="经历时间" description={hasInvalidDates ? "部分结束时间早于开始时间，请修正。" : "未发现起止时间倒置，请确认真实日期。"} action={() => navigate(invalidProjectDates && !invalidWorkDates ? "/projects" : "/work")} />
+          <CheckRow complete={!hasInvalidDates} title="经历时间" description={hasInvalidDates ? "部分日期格式无效或结束时间早于开始时间，请检查。" : "未发现格式错误或起止时间倒置，请核对真实日期。"} action={() => navigate(invalidProjectDates && !invalidWorkDates ? "/projects" : "/work")} />
           <div className="flex gap-3 py-3"><CircleAlert size={16} className="mt-0.5 shrink-0 text-neutral-400" /><div><h3 className="text-xs font-medium text-neutral-700">内容与排版</h3><p className="mt-1 text-xs leading-5 text-neutral-500">替换示例经历，核对职责与成果；打开导出文件，检查分页、头像和长段落。</p></div></div>
         </div>
       </section>
