@@ -1,24 +1,28 @@
 import { Fragment, type ReactNode } from "react";
+import { Pencil } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 import { useResumeStore } from "../store/resumeStore";
 import { dateRange, getResumeTemplate, nonemptyLines, type ResumeSectionKey } from "../data/resumeTemplates";
 import type { ResumeData, TemplateKey } from "../types/resume";
 
-export function LivePreview({ activeSection }: { activeSection?: string }) {
+type EditableSection = "basic" | "work" | "projects" | "skills";
+type EditSection = (section: EditableSection) => void;
+
+export function LivePreview({ activeSection, onEditSection }: { activeSection?: string; onEditSection?: EditSection }) {
   const { resume, template } = useResumeStore(useShallow((state) => ({ resume: state.resume, template: state.template })));
   return (
     <div className="w-full min-w-0" aria-label="简历实时预览">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
         <span>实时预览</span><span>{getResumeTemplate(template).name} · A4 导出</span>
       </div>
-      <ResumeDocument resume={resume} template={template} activeSection={activeSection} />
-      <p className="mt-4 text-center text-[11px] leading-5 text-neutral-400">修改即时呈现 · 选中提示不会出现在导出文件中</p>
+      <ResumeDocument resume={resume} template={template} activeSection={activeSection} onEditSection={onEditSection} />
+      <p className="mt-4 text-center text-[11px] leading-5 text-neutral-500">点击章节旁的编辑按钮修改内容 · 编辑提示不会出现在导出文件中</p>
     </div>
   );
 }
 
 /** Shared by the editor and public resume page. Only one paper mounts per route. */
-export function ResumeDocument({ resume, template = "focus", activeSection }: { resume: ResumeData; template?: TemplateKey; activeSection?: string }) {
+export function ResumeDocument({ resume, template = "focus", activeSection, onEditSection }: { resume: ResumeData; template?: TemplateKey; activeSection?: string; onEditSection?: EditSection }) {
   const { personal, education } = resume;
   const work = (Array.isArray(resume.work) ? resume.work : []).filter((item) => item.company || item.title || item.city || item.startDate || item.endDate || nonemptyLines(item.bullets).length || nonemptyLines(item.tags).length);
   const projects = (Array.isArray(resume.projects) ? resume.projects : []).filter((item) => item.name || item.role || item.startDate || item.endDate || nonemptyLines(item.bullets).length || nonemptyLines(item.tags).length);
@@ -27,28 +31,30 @@ export function ResumeDocument({ resume, template = "focus", activeSection }: { 
   const selected = (section: string) => activeSection === section
     || (activeSection === "basic" && section === "summary")
     || (activeSection === "skills" && section === "education");
+  const editProps = { onEditSection };
   const sections: Record<ResumeSectionKey, ReactNode> = {
-    summary: personal.summary?.trim() && <PaperSection name="summary" title="个人简介" active={selected("summary")}><p data-pdf-block className="whitespace-pre-line">{personal.summary}</p></PaperSection>,
-    work: work.length > 0 && <PaperSection name="work" title="工作经历" active={selected("work")}><div className="space-y-4">{work.map((item) => <div key={item.id} data-pdf-block>
+    summary: personal.summary?.trim() && <PaperSection {...editProps} name="summary" title="个人简介" active={selected("summary")}><p data-pdf-block className="whitespace-pre-line">{personal.summary}</p></PaperSection>,
+    work: work.length > 0 && <PaperSection {...editProps} name="work" title="工作经历" active={selected("work")}><div className="space-y-4">{work.map((item) => <div key={item.id} data-pdf-block>
       <EntryHeading title={item.company} date={dateRange(item.startDate, item.endDate)} />
       <p className="mb-1 text-[12px] text-neutral-600">{[item.title, item.city].filter(Boolean).join(" · ")}</p>
       <BulletList lines={item.bullets} /><Tags tags={item.tags} />
     </div>)}</div></PaperSection>,
-    projects: projects.length > 0 && <PaperSection name="projects" title="项目经历" active={selected("projects")}><div className="space-y-4">{projects.map((item) => <div key={item.id} data-pdf-block>
+    projects: projects.length > 0 && <PaperSection {...editProps} name="projects" title="项目经历" active={selected("projects")}><div className="space-y-4">{projects.map((item) => <div key={item.id} data-pdf-block>
       <EntryHeading title={item.name} date={dateRange(item.startDate, item.endDate)} />
       {item.role && <p className="mb-1 text-[12px] text-neutral-600">{item.role}</p>}
       <BulletList lines={item.bullets} /><Tags tags={item.tags} />
     </div>)}</div></PaperSection>,
-    education: !!hasEducation && <PaperSection name="education" title="教育背景" active={selected("education")}>
+    education: !!hasEducation && <PaperSection {...editProps} name="education" title="教育背景" active={selected("education")}>
       <div data-pdf-block><EntryHeading title={education.school} date={education.years} />
       <p className="text-[12px] text-neutral-600">{[education.degree, education.major].filter(Boolean).join(" · ")}</p>
       <BulletList lines={education.description?.split("\n")} /><Tags tags={education.tags} /></div>
     </PaperSection>,
-    skills: skills.length > 0 && <PaperSection name="skills" title="专业技能" active={selected("skills")}><p data-pdf-block>{skills.join(" / ")}</p></PaperSection>
+    skills: skills.length > 0 && <PaperSection {...editProps} name="skills" title="专业技能" active={selected("skills")}><p data-pdf-block>{skills.join(" / ")}</p></PaperSection>
   };
   return (
     <article id="resume-preview" className="resume-paper mx-auto w-full max-w-[794px] border border-neutral-200 bg-white px-6 py-8 text-[12px] leading-[1.85] text-neutral-700 shadow-[0_4px_20px_rgba(0,0,0,0.035)] sm:px-9 sm:py-10" style={{ overflowWrap: "anywhere", minHeight: "600px", colorScheme: "light" }} aria-label="简历内容预览">
-      <header data-resume-section="basic" data-active={selected("basic")} data-pdf-block className="mb-6 border-b-2 border-neutral-700 pb-5" style={selectionStyle(selected("basic"))}>
+      <header data-resume-section="basic" data-active={selected("basic")} data-pdf-block className="relative mb-6 border-b-2 border-neutral-700 pb-5" style={selectionStyle(selected("basic"))}>
+        {onEditSection && <div data-preview-only className="absolute -right-1 -top-6"><PreviewEdit title="基本信息" onClick={() => onEditSection("basic")} /></div>}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-[28px] font-semibold leading-tight tracking-[0.08em] text-neutral-900">{personal.name || "你的姓名"}</h1>
@@ -70,10 +76,15 @@ function selectionStyle(active: boolean) {
   return active ? { backgroundColor: "#fafafa", outline: "1px dashed #d4d4d4", outlineOffset: "7px" } : undefined;
 }
 
-function PaperSection({ name, title, active, children }: { name: string; title: string; active: boolean; children: ReactNode }) {
+function PaperSection({ name, title, active, children, onEditSection }: { name: ResumeSectionKey; title: string; active: boolean; children: ReactNode; onEditSection?: EditSection }) {
+  const target = name === "summary" ? "basic" : name === "education" ? "skills" : name;
   return <section data-resume-section={name} data-active={active} className="mb-5 last:mb-0" style={selectionStyle(active)}>
-    <h2 className="mb-2 border-b border-neutral-200 pb-1 text-[13px] font-semibold tracking-[0.08em] text-neutral-900">{title}</h2>{children}
+    <h2 className="relative mb-2 border-b border-neutral-200 pb-1 text-[13px] font-semibold tracking-[0.08em] text-neutral-900">{title}{onEditSection && <span data-preview-only className="absolute -right-1 -top-1"><PreviewEdit title={title} onClick={() => onEditSection(target)} /></span>}</h2>{children}
   </section>;
+}
+
+function PreviewEdit({ title, onClick }: { title: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} aria-label={`编辑${title}`} title={`编辑${title}`} className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-[10px] font-normal tracking-normal text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"><Pencil size={11} aria-hidden="true" />编辑</button>;
 }
 
 function EntryHeading({ title, date }: { title: string; date: string }) {

@@ -41,6 +41,7 @@ function MainEditor() {
   const managerButton = useRef<HTMLButtonElement>(null);
   const managerPanel = useRef<HTMLElement>(null);
   const previousPath = useRef(location.pathname);
+  const focusEditor = useRef(false);
   const checks = getResumeChecks(resume);
   const sectionIndex = sections.findIndex(section => section.path === location.pathname);
 
@@ -49,6 +50,15 @@ function MainEditor() {
     if (previousPath.current !== location.pathname && window.matchMedia("(max-width: 959px)").matches) toolsRef.current?.scrollIntoView({ block: "start" });
     previousPath.current = location.pathname;
   }, [location.pathname, location.key]);
+  useEffect(() => {
+    if (focusEditor.current && tab === "edit" && mobileView === "edit") {
+      if (window.matchMedia("(max-width: 959px)").matches) toolsRef.current?.scrollIntoView({ block: "start" });
+      const heading = document.querySelector<HTMLElement>("#tool-panel-edit h1, #tool-panel-edit h2");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus({ preventScroll: true });
+      focusEditor.current = false;
+    }
+  }, [location.key, tab, mobileView]);
   useEffect(() => {
     const open = () => { setTab("edit"); setMobileView("edit"); };
     window.addEventListener("offerforge:open-editor", open);
@@ -91,7 +101,7 @@ function MainEditor() {
       </div>
       <div className="workspace-grid" data-mobile-view={mobileView}>
         <nav className="section-outline" aria-label="简历章节"><p className="outline-caption">内容大纲</p>{sections.map(({path,label,icon:Icon}) => <NavLink key={path} to={path} className={({isActive}) => `outline-link ${isActive ? "active" : ""}`}><Icon size={16}/><span>{label}</span></NavLink>)}<div className="outline-tip"><BookOpen size={16}/><p>先写真实经历，再用参考与建议完善表达。</p></div></nav>
-        <main className="preview-workspace" aria-label="实时简历预览"><LivePreview activeSection={location.pathname.slice(1)} /></main>
+        <main className="preview-workspace" aria-label="实时简历预览"><LivePreview activeSection={location.pathname.slice(1)} onEditSection={section => { focusEditor.current = true; navigate(`/${section}`); }} /></main>
         <aside ref={toolsRef} className="editor-tools" aria-label="简历编辑与辅助">
           <div className="editor-tool-tabs" role="tablist" aria-label="写作工具">{toolTabs.map((item,index)=><button id={`tool-tab-${item.key}`} role="tab" tabIndex={tab===item.key ? 0 : -1} aria-selected={tab===item.key} aria-controls={`tool-panel-${item.key}`} key={item.key} onClick={()=>setTab(item.key)} onKeyDown={event=>{
             const next = event.key === "ArrowRight" ? (index+1)%toolTabs.length : event.key === "ArrowLeft" ? (index+toolTabs.length-1)%toolTabs.length : event.key === "Home" ? 0 : event.key === "End" ? toolTabs.length-1 : -1;

@@ -4,6 +4,7 @@ import { defaultResume, templateResumes } from "../data/defaultResume";
 import type { Education, PersonalInfo, ProjectExperience, ResumeData, TemplateKey, WorkExperience } from "../types/resume";
 import { calcATSScore } from "../utils/atsScore";
 import { hydrateResumeState } from "../utils/draftLibrary";
+import { applyExperienceMutation, moveExperience, restoreExperience, type RemovedExperience } from "../utils/experienceEditing";
 
 interface ResumeState {
   resume: ResumeData;
@@ -12,10 +13,14 @@ interface ResumeState {
   updatePersonal: (patch: Partial<PersonalInfo>) => void;
   updateEducation: (patch: Partial<Education>) => void;
   updateWork: (id: string, patch: Partial<WorkExperience>) => void;
-  addWork: () => void;
+  addWork: () => string;
+  moveWork: (id: string, direction: -1 | 1) => void;
+  restoreWork: (entry: RemovedExperience<WorkExperience>, resumeId: string) => void;
   removeWork: (id: string) => void;
   updateProject: (id: string, patch: Partial<ProjectExperience>) => void;
-  addProject: () => void;
+  addProject: () => string;
+  moveProject: (id: string, direction: -1 | 1) => void;
+  restoreProject: (entry: RemovedExperience<ProjectExperience>, resumeId: string) => void;
   removeProject: (id: string) => void;
   updateSkills: (skills: string[]) => void;
   setTemplate: (template: TemplateKey) => void;
@@ -32,7 +37,10 @@ const withATS = (resume: ResumeData): ResumeData => ({
 
 export const useResumeStore = create<ResumeState>()(
   persist(
-    (set) => ({
+    (set, get) => {
+      const changeExperience = (update: (state: ResumeState) => Partial<ResumeState> | ResumeState) =>
+        applyExperienceMutation(() => get().resume, () => set(update));
+      return {
       resume: defaultResume,
       template: "focus",
       lastTouched: defaultResume.lastSaved,
@@ -58,16 +66,27 @@ export const useResumeStore = create<ResumeState>()(
             work: state.resume.work.map((item) => (item.id === id ? { ...item, ...patch } : item))
           })
         })),
-      addWork: () =>
-        set((state) => ({
+      addWork: () => {
+        const id = `work-${crypto.randomUUID()}`;
+        changeExperience((state) => ({
           lastTouched: now(),
           resume: withATS({
             ...state.resume,
-            work: [...state.resume.work, { id: `work-${Date.now()}`, company: "", title: "", city: "", startDate: "", endDate: "", bullets: [], tags: [] }]
+            work: [...state.resume.work, { id, company: "", title: "", city: "", startDate: "", endDate: "", bullets: [], tags: [] }]
           })
-        })),
+        }));
+        return id;
+      },
+      moveWork: (id, direction) => changeExperience(state => {
+        const work = moveExperience(state.resume.work, id, direction);
+        return work === state.resume.work ? state : { lastTouched: now(), resume: { ...state.resume, work } };
+      }),
+      restoreWork: (entry, resumeId) => changeExperience(state => {
+        const work = restoreExperience(state.resume.work, entry, resumeId, state.resume.id);
+        return work === state.resume.work ? state : { lastTouched: now(), resume: withATS({ ...state.resume, work }) };
+      }),
       removeWork: (id) =>
-        set((state) => ({
+        changeExperience((state) => ({
           lastTouched: now(),
           resume: withATS({ ...state.resume, work: state.resume.work.filter((item) => item.id !== id) })
         })),
@@ -79,16 +98,27 @@ export const useResumeStore = create<ResumeState>()(
             projects: state.resume.projects.map((item) => (item.id === id ? { ...item, ...patch } : item))
           })
         })),
-      addProject: () =>
-        set((state) => ({
+      addProject: () => {
+        const id = `project-${crypto.randomUUID()}`;
+        changeExperience((state) => ({
           lastTouched: now(),
           resume: withATS({
             ...state.resume,
-            projects: [...state.resume.projects, { id: `project-${Date.now()}`, name: "", role: "", startDate: "", endDate: "", bullets: [], tags: [] }]
+            projects: [...state.resume.projects, { id, name: "", role: "", startDate: "", endDate: "", bullets: [], tags: [] }]
           })
-        })),
+        }));
+        return id;
+      },
+      moveProject: (id, direction) => changeExperience(state => {
+        const projects = moveExperience(state.resume.projects, id, direction);
+        return projects === state.resume.projects ? state : { lastTouched: now(), resume: { ...state.resume, projects } };
+      }),
+      restoreProject: (entry, resumeId) => changeExperience(state => {
+        const projects = restoreExperience(state.resume.projects, entry, resumeId, state.resume.id);
+        return projects === state.resume.projects ? state : { lastTouched: now(), resume: withATS({ ...state.resume, projects }) };
+      }),
       removeProject: (id) =>
-        set((state) => ({
+        changeExperience((state) => ({
           lastTouched: now(),
           resume: withATS({ ...state.resume, projects: state.resume.projects.filter((item) => item.id !== id) })
         })),
@@ -110,7 +140,8 @@ export const useResumeStore = create<ResumeState>()(
           template: "focus",
           lastTouched: now()
         })
-    }),
+      };
+    },
     {
       name: "offerforge-react-resume",
       merge: (persisted, current) => {

@@ -17,6 +17,7 @@ export async function exportResumePdf(fileName?: string) {
     showToast("正在生成 PDF…", "info");
     snapshot = previewNode.cloneNode(true) as HTMLElement;
     snapshot.id = "resume-pdf-snapshot";
+    snapshot.querySelectorAll("[data-preview-only]").forEach(element => element.remove());
     snapshot.setAttribute("aria-hidden", "true");
     Object.assign(snapshot.style, {
       position: "absolute", left: "-10000px", top: "0", width: "794px", maxWidth: "none",

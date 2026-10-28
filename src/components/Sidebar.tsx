@@ -9,6 +9,7 @@ import { sendEmailCode, loginByEmail, saveUser, loadUser, clearUser, type UserIn
 import { ConfirmDialog, PromptDialog } from "./Dialogs";
 import { Modal } from "./Modal";
 import { showToast } from "./Toast";
+import { ResumeBackup } from "./ResumeBackup";
 
 interface JobApp {
   id: string;
@@ -245,6 +246,11 @@ export function Sidebar({ onOpenEditor, onSaveStatus }: { onOpenEditor?: () => v
     showToast("已复制简历，可以为另一个岗位单独修改。", "success");
   };
 
+  const importResume = (snapshot: ResumeSnapshot): boolean => {
+    if (!persistCurrent() || !persistSnapshot(snapshot)) return false;
+    return activateSnapshot(snapshot);
+  };
+
   const deleteResume = () => {
     if (!deleteTarget) return;
     try {
@@ -372,6 +378,8 @@ export function Sidebar({ onOpenEditor, onSaveStatus }: { onOpenEditor?: () => v
 
           <button type="button" onClick={copyCurrentResume} className="mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 hover:bg-neutral-50"><Copy size={15} />复制当前简历</button>
           <p className="mt-2 text-xs leading-5 text-neutral-500">已保存 {recents.length} 份草稿，每份保留独立内容与模板。</p>
+
+          <div className="mt-5"><ResumeBackup snapshot={{ version: 1, resume, template, lastTouched }} onImport={importResume} /></div>
 
           <div className="my-5 h-px bg-slate-100" />
 
