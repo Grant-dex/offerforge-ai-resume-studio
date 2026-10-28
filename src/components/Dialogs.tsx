@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "./Modal";
 
 export function ConfirmDialog({
@@ -57,6 +57,7 @@ export function PromptDialog({
   defaultValue?: string;
 }) {
   const [value, setValue] = useState(defaultValue);
+  useEffect(() => { if (open) setValue(defaultValue); }, [open, defaultValue]);
 
   const handleSubmit = () => {
     const trimmed = value.trim();
@@ -74,7 +75,7 @@ export function PromptDialog({
           className="input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) handleSubmit(); }}
           autoFocus
         />
       </label>

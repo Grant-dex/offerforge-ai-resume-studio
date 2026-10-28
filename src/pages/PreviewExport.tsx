@@ -1,16 +1,28 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Download, FileText, Link2, Loader2 } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 import { useNavigate } from "react-router-dom";
 import { useResumeStore } from "../store/resumeStore";
 import { showToast } from "../components/Toast";
 import { TemplatePicker } from "../components/TemplatePicker";
+import { createResumeShareUrl, DEFAULT_SHARE_OPTIONS } from "../utils/resumeShare";
 
 export function PreviewExportPage() {
   const { resume, template } = useResumeStore(useShallow((state) => ({ resume: state.resume, template: state.template })));
   const navigate = useNavigate();
   const [busy, setBusy] = useState<"pdf" | "word" | null>(null);
   const [shareUrl, setShareUrl] = useState("");
+  const [shareOptions, setShareOptions] = useState(DEFAULT_SHARE_OPTIONS);
+  const [shareError, setShareError] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const shareRequest = useRef(0);
+  useEffect(() => {
+    shareRequest.current += 1;
+    setShareUrl("");
+    setShareError("");
+    setSharing(false);
+    return () => { shareRequest.current += 1; };
+  }, [resume, template, shareOptions]);
   const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
   const contactsComplete = !!(resume.personal.name.trim() && resume.personal.phone.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resume.personal.email));
   const invalidWorkDates = resume.work.some((item) => item.startDate && item.endDate && /^\d{4}-/.test(item.endDate) && item.startDate > item.endDate);
@@ -34,16 +46,23 @@ export function PreviewExportPage() {
     } finally { setBusy(null); }
   };
   const share = async () => {
-    const shared = { ...resume, personal: { ...resume.personal, email: "", phone: "" } };
-    const params = new URLSearchParams({ data: btoa(encodeURIComponent(JSON.stringify(shared))), template });
-    const url = `${window.location.origin}${window.location.pathname}#/shared?${params.toString()}`;
-    setShareUrl(url);
+    if (sharing) return;
+    const request = ++shareRequest.current;
+    setSharing(true);
+    setShareError("");
     try {
-      await navigator.clipboard.writeText(url);
-      showToast("分享链接已复制，已隐藏电话与邮箱", "success");
-    } catch {
-      showToast("请在下方选中并复制分享链接", "info");
-    }
+      const url = createResumeShareUrl(resume, template, `${window.location.origin}${window.location.pathname}`, shareOptions);
+      setShareUrl(url);
+      try {
+        await navigator.clipboard.writeText(url);
+        if (request === shareRequest.current) showToast("分享链接已复制，内容按下方选项生成", "success");
+      } catch {
+        if (request === shareRequest.current) showToast("请在下方选中并复制分享链接", "info");
+      }
+    } catch (error) {
+      setShareUrl("");
+      setShareError(error instanceof Error ? error.message : "无法生成分享链接，请尝试导出文件。");
+    } finally { if (request === shareRequest.current) setSharing(false); }
   };
   return (
     <div className="min-w-0 space-y-6">
@@ -64,8 +83,17 @@ export function PreviewExportPage() {
           <button type="button" disabled={!!busy} onClick={() => void download("word")} className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-3 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">{busy === "word" ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}导出 Word</button>
         </div>
         <p className="mt-3 text-xs leading-5 text-neutral-500">PDF 保留视觉排版，为图片版；需要可编辑文字时请选择 Word。</p>
-        <button type="button" onClick={() => void share()} className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-neutral-600 hover:text-neutral-900"><Link2 size={15} />复制简历分享链接</button>
-        <p className="mt-2 text-[11px] leading-5 text-neutral-400">分享包含当前简历内容，默认隐藏电话与邮箱。更新内容后需重新复制链接。</p>
+      </section>
+      <section className="border-t border-neutral-200 pt-5" aria-labelledby="share-heading">
+        <h2 id="share-heading" className="text-sm font-semibold text-neutral-800">分享这份简历</h2>
+        <fieldset className="mt-3 space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+          <legend className="px-1 text-xs text-neutral-500">链接包含的信息</legend>
+          <label className="flex items-center gap-2 text-xs text-neutral-700"><input type="checkbox" checked={shareOptions.includeContacts} onChange={event => setShareOptions(options => ({ ...options, includeContacts: event.target.checked }))} className="h-4 w-4 accent-neutral-700" />包含电话与邮箱</label>
+          <label className="flex items-center gap-2 text-xs text-neutral-700"><input type="checkbox" checked={shareOptions.includeAvatar} disabled={!resume.personal.avatar} onChange={event => setShareOptions(options => ({ ...options, includeAvatar: event.target.checked }))} className="h-4 w-4 accent-neutral-700" />包含头像{!resume.personal.avatar && <span className="text-neutral-400">（尚未上传）</span>}</label>
+        </fieldset>
+        <p className="mt-2 text-xs leading-5 text-neutral-500">默认只分享文字经历，隐藏电话、邮箱和头像。获得链接的人可以查看所选信息；更新内容后请重新生成。</p>
+        <button type="button" disabled={sharing} onClick={() => void share()} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">{sharing ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}生成并复制分享链接</button>
+        {shareError && <p role="alert" className="mt-3 text-xs leading-5 text-red-700">{shareError}</p>}
         {isLocalPreview && <p className="mt-2 text-xs leading-5 text-neutral-600">当前为本机预览，链接只能在这台电脑打开；网站上线后可分享给他人。</p>}
         {shareUrl && <label className="mt-3 block text-xs text-neutral-500">分享链接<input aria-label="简历分享链接" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} className="mt-1 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600" /></label>}
       </section>

@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { defaultResume, templateResumes } from "../data/defaultResume";
 import type { Education, PersonalInfo, ProjectExperience, ResumeData, TemplateKey, WorkExperience } from "../types/resume";
 import { calcATSScore } from "../utils/atsScore";
+import { hydrateResumeState } from "../utils/draftLibrary";
 
 interface ResumeState {
   resume: ResumeData;
@@ -28,31 +29,6 @@ const withATS = (resume: ResumeData): ResumeData => ({
   ...resume,
   atsScore: calcATSScore(resume)
 });
-
-const normalizeResume = (resume?: Partial<ResumeData>): ResumeData => {
-  const base: ResumeData = {
-    ...defaultResume,
-    ...resume,
-    personal: {
-      ...defaultResume.personal,
-      ...(resume?.personal ?? {})
-    },
-    education: {
-      ...defaultResume.education,
-      ...(resume?.education ?? {}),
-      tags: Array.isArray(resume?.education?.tags) ? resume.education.tags : [],
-      description: resume?.education?.description ?? ""
-    },
-    skills: Array.isArray(resume?.skills) ? resume.skills : defaultResume.skills,
-    work: Array.isArray(resume?.work)
-      ? resume.work.map((w) => ({ ...w, tags: Array.isArray((w as any).tags) ? (w as any).tags : [] }))
-      : defaultResume.work,
-    projects: Array.isArray(resume?.projects)
-      ? resume.projects.map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }))
-      : defaultResume.projects
-  };
-  return withATS(base);
-};
 
 export const useResumeStore = create<ResumeState>()(
   persist(
@@ -138,14 +114,8 @@ export const useResumeStore = create<ResumeState>()(
     {
       name: "offerforge-react-resume",
       merge: (persisted, current) => {
-        const saved = persisted as Partial<ResumeState> | undefined;
-        return {
-          ...current,
-          ...saved,
-          template: saved?.template && ["focus", "stack", "lead"].includes(saved.template) ? saved.template : current.template,
-          lastTouched: saved?.lastTouched ?? current.lastTouched,
-          resume: normalizeResume(saved?.resume)
-        };
+        const restored = hydrateResumeState(persisted, current);
+        return { ...restored, resume: withATS(restored.resume) };
       }
     }
   )

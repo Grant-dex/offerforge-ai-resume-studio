@@ -1,6 +1,7 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { showToast } from "../components/Toast";
+import { keepBlocksTogether, type PageBlock } from "./pdfPagination";
 
 const EXPORT_NODE_ID = "resume-preview";
 let exporting = false;
@@ -33,6 +34,13 @@ export async function exportResumePdf(fileName?: string) {
       if (!image.complete) await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("头像加载失败，请重新上传后导出")); });
       if (!image.naturalWidth) throw new Error("头像加载失败，请重新上传后导出");
     }));
+    const snapshotTop = snapshot.getBoundingClientRect().top;
+    const blocks: PageBlock[] = Array.from(snapshot.querySelectorAll<HTMLElement>("[data-pdf-block], [data-pdf-line], h2")).map(element => {
+      const rect = element.getBoundingClientRect();
+      // A heading travels with the first content line, rather than ending a page alone.
+      const bottom = element.tagName === "H2" ? Math.max(rect.bottom, element.nextElementSibling?.getBoundingClientRect().top ?? rect.bottom) + 40 : rect.bottom;
+      return { top: (rect.top - snapshotTop) * 2, bottom: (bottom - snapshotTop) * 2 };
+    });
     const canvas = await html2canvas(snapshot, { scale: 2, useCORS: true, allowTaint: false, backgroundColor: "#ffffff", logging: false, width: 794, windowWidth: 1280 });
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
     const pageWidth = 190;
@@ -44,7 +52,8 @@ export async function exportResumePdf(fileName?: string) {
     let pageCount = 0;
     while (position < canvas.height) {
       const target = Math.min(position + maxHeight, canvas.height);
-      const end = target < canvas.height ? findWhiteBreak(context, canvas.width, target, position) : target;
+      const preferred = keepBlocksTogether(target, position, maxHeight, blocks);
+      const end = target < canvas.height ? findWhiteBreak(context, canvas.width, preferred, position) : target;
       const height = end - position;
       const page = document.createElement("canvas");
       page.width = canvas.width; page.height = height;

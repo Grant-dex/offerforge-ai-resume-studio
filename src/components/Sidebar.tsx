@@ -1,8 +1,8 @@
-import { ChevronRight, Crown, FileText, Lightbulb, Loader2, LogIn, Palette, Plus, Settings, Sparkles, Trash2, User, X } from "lucide-react";
+import { Copy, FileText, LogIn, Plus, Settings, Sparkles, Trash2, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useResumeStore } from "../store/resumeStore";
-import { defaultResume } from "../data/defaultResume";
 import type { ResumeData } from "../types/resume";
+import { duplicateResume, loadDraftEntries, loadResumeSnapshot, makeResumeDraft, removeResumeSnapshot, saveActiveResume, saveResumeSnapshot, type RecentEntry, type ResumeSnapshot } from "../utils/draftLibrary";
 import { useT } from "../i18n";
 import { calcATSScore } from "../utils/atsScore";
 import { sendEmailCode, loginByEmail, saveUser, loadUser, clearUser, type UserInfo } from "../utils/auth";
@@ -10,31 +10,12 @@ import { ConfirmDialog, PromptDialog } from "./Dialogs";
 import { Modal } from "./Modal";
 import { showToast } from "./Toast";
 
-const DAILY_TIPS = [
-  "用数字量化成果，如'提升销售额30%'比'提升销售额'更有说服力",
-  "简历中的关键词要与目标岗位JD高度匹配，ATS系统会优先筛选",
-  "每段工作经历控制在3-5个要点，聚焦最核心的成就",
-  "项目经历用STAR法则描述：情境、任务、行动、结果",
-  "简历不要超过一页A4纸，HR平均只花6秒浏览一份简历",
-  "使用行业专业术语，但避免过于生僻的缩写",
-  "简历命名格式：姓名_岗位_工作年限.pdf，方便HR归档",
-  "定期更新简历，即使不找工作也能保持对自身成长的感知",
-  "在LinkedIn上保持与简历一致的经历描述，增加可信度",
-  "简历开头用一句话总结核心竞争力，形成强烈的第一印象"
-];
-
 interface JobApp {
   id: string;
   company: string;
   role: string;
   status: "待回复" | "面试中" | "已拒绝";
   date: string;
-}
-
-interface RecentEntry {
-  id: string;
-  title: string;
-  lastEdited: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,69 +41,7 @@ function saveJobs(jobs: JobApp[]) {
 }
 
 function loadRecents(): RecentEntry[] {
-  try {
-    return (JSON.parse(localStorage.getItem("offerforge-recents") || "[]") as Partial<RecentEntry>[])
-      .map((entry) => ({
-        id: entry.id || `legacy-${entry.title || Date.now()}`,
-        title: entry.title || "未命名简历",
-        lastEdited: entry.lastEdited || "--:--"
-      }));
-  } catch { return []; }
-}
-
-function saveRecents(recents: RecentEntry[]) {
-  localStorage.setItem("offerforge-recents", JSON.stringify(recents));
-}
-
-function saveResumeSnapshot(resume: ResumeData) {
-  localStorage.setItem(`offerforge-snapshot-${resume.id}`, JSON.stringify(resume));
-}
-
-function loadResumeSnapshot(id: string): ResumeData | null {
-  try {
-    return JSON.parse(localStorage.getItem(`offerforge-snapshot-${id}`) || "null");
-  } catch { return null; }
-}
-
-function removeResumeSnapshot(id: string) {
-  localStorage.removeItem(`offerforge-snapshot-${id}`);
-}
-
-function makeResumeDraft(index: number): ResumeData {
-  const nextId = `resume-${Date.now()}`;
-  const draft: ResumeData = {
-    ...JSON.parse(JSON.stringify(defaultResume)),
-    id: nextId,
-    title: `新简历 ${index}`,
-    subtitle: "请完善目标岗位信息",
-    lastSaved: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
-    personal: {
-      ...JSON.parse(JSON.stringify(defaultResume.personal)),
-      resumeTitle: `新简历 ${index}`,
-      name: "",
-      role: "",
-      seniority: "",
-      email: "",
-      phone: "",
-      city: "",
-      summary: "",
-      avatar: ""
-    },
-    skills: [],
-    work: [],
-    projects: [],
-    education: {
-      ...JSON.parse(JSON.stringify(defaultResume.education)),
-      school: "",
-      major: "",
-      degree: "",
-      years: "",
-      description: "",
-      tags: []
-    }
-  };
-  draft.atsScore = calcATSScore(draft);
-  return draft;
+  try { return loadDraftEntries(localStorage); } catch { return []; }
 }
 
 function calcCompleteness(resume: ResumeData): number {
@@ -141,20 +60,25 @@ function calcCompleteness(resume: ResumeData): number {
   return score;
 }
 
-export function Sidebar() {
+export function Sidebar({ onOpenEditor, onSaveStatus }: { onOpenEditor?: () => void; onSaveStatus?: (error: string | null) => void }) {
   const { t, locale, setLocale } = useT();
   const resume = useResumeStore((state) => state.resume);
   const updatePersonal = useResumeStore((state) => state.updatePersonal);
+  const template = useResumeStore((state) => state.template);
+  const lastTouched = useResumeStore((state) => state.lastTouched);
   const [proOpen, setProOpen] = useState(false);
   const [jobs, setJobs] = useState<JobApp[]>(loadJobs);
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
+  const recentsRef = useRef(recents);
+  const [saveError, setSaveError] = useState("");
+  const saveErrorRef = useRef(false);
   const [addJobOpen, setAddJobOpen] = useState(false);
   const [newCompany, setNewCompany] = useState("");
   const [newRole, setNewRole] = useState("");
 
   // Dialog states
   const [renameOpen, setRenameOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<RecentEntry | null>(null);
   const [newResumeOpen, setNewResumeOpen] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<RecentEntry | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -214,25 +138,42 @@ export function Sidebar() {
   };
 
   const completeness = calcCompleteness(resume);
-  const today = new Date();
-  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-  const tipKey = `tip.${(dayOfYear % DAILY_TIPS.length) + 1}`;
-
+  const reportSaveError = () => {
+    const message = "浏览器存储空间不足或不可用，部分修改未保存。当前内容仍在页面中，请先导出需要保留的文件。";
+    setSaveError(message);
+    if (!saveErrorRef.current) showToast(message, "error");
+    saveErrorRef.current = true;
+  };
+  const persistSnapshot = (snapshot: ResumeSnapshot): boolean => {
+    try {
+      const updated = saveResumeSnapshot(localStorage, snapshot, recentsRef.current);
+      recentsRef.current = updated;
+      setRecents(updated);
+      return true;
+    } catch { reportSaveError(); return false; }
+  };
+  const persistCurrent = () => {
+    const state = useResumeStore.getState();
+    const snapshot: ResumeSnapshot = { version: 1, resume: state.resume, template: state.template, lastTouched: state.lastTouched };
+    try { saveActiveResume(localStorage, snapshot); } catch { reportSaveError(); return false; }
+    if (!persistSnapshot(snapshot)) return false;
+    setSaveError("");
+    saveErrorRef.current = false;
+    return true;
+  };
+  const activateSnapshot = (snapshot: ResumeSnapshot): boolean => {
+    try {
+      // Preflight persistence before replacing the in-memory document.
+      saveActiveResume(localStorage, snapshot);
+      useResumeStore.setState({ resume: { ...snapshot.resume, atsScore: calcATSScore(snapshot.resume) }, template: snapshot.template, lastTouched: snapshot.lastTouched });
+    } catch { reportSaveError(); return false; }
+    onOpenEditor?.();
+    return true;
+  };
   useEffect(() => {
-    const entry: RecentEntry = {
-      id: resume.id,
-      title: resume.title,
-      lastEdited: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
-    };
-
-    setRecents((current) => {
-      const updated = [entry, ...current.filter((item) => item.id !== entry.id)].slice(0, 5);
-      saveRecents(updated);
-      return updated;
-    });
-
-    saveResumeSnapshot(resume);
-  }, [resume]);
+    persistCurrent();
+  }, [resume, template, lastTouched]);
+  useEffect(() => { onSaveStatus?.(saveError || null); }, [saveError, onSaveStatus]);
 
   const addJob = () => {
     if (!newCompany.trim() || !newRole.trim()) return;
@@ -269,54 +210,65 @@ export function Sidebar() {
   };
 
   const switchToRecent = (entry: RecentEntry) => {
-    const snap = loadResumeSnapshot(entry.id);
-    if (snap) {
-      setSwitchTarget(entry);
-    }
+    if (entry.id === resume.id) { onOpenEditor?.(); return; }
+    if (loadResumeSnapshot(localStorage, entry.id)) setSwitchTarget(entry);
+    else showToast("这份草稿无法读取，请检查浏览器本地数据。", "error");
   };
 
   const confirmSwitch = () => {
     if (!switchTarget) return;
-    const snap = loadResumeSnapshot(switchTarget.id);
-    if (snap) {
-      useResumeStore.setState({ resume: { ...snap, atsScore: calcATSScore(snap) }, lastTouched: switchTarget.lastEdited });
-      showToast(t("sidebar.switchedTo", { name: switchTarget.title }), "success");
-    }
+    const snapshot = loadResumeSnapshot(localStorage, switchTarget.id);
+    if (!snapshot) { showToast("这份草稿无法读取，当前简历已保留。", "error"); return; }
+    if (!persistCurrent()) return;
+    if (!activateSnapshot(snapshot)) return;
+    showToast(t("sidebar.switchedTo", { name: snapshot.resume.title }), "success");
     setSwitchTarget(null);
   };
 
   const createResume = () => {
-    const existingNumbers = recents
-      .map((entry) => Number(entry.title.replace("新简历 ", "")))
-      .filter((value) => Number.isFinite(value));
-    const nextIndex = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : recents.length + 1;
-    const draft = makeResumeDraft(nextIndex);
-    useResumeStore.setState({ resume: draft, lastTouched: draft.lastSaved });
+    if (!persistCurrent()) return;
+    const numbers = recents.map(entry => /^新简历 (\d+)$/.exec(entry.title)).filter(Boolean).map(match => Number(match![1]));
+    const draft = makeResumeDraft(Math.max(0, ...numbers) + 1);
+    const snapshot: ResumeSnapshot = { version: 1, resume: draft, template: "focus", lastTouched: draft.lastSaved };
+    if (!persistSnapshot(snapshot)) return;
+    if (!activateSnapshot(snapshot)) return;
     setNewResumeOpen(false);
     showToast(t("sidebar.created"), "success");
   };
 
-  const deleteCurrentResume = () => {
-    const remaining = recents.filter((entry) => entry.id !== resume.id);
-    removeResumeSnapshot(resume.id);
-    setRecents(remaining);
-    saveRecents(remaining);
+  const copyCurrentResume = () => {
+    if (!persistCurrent()) return;
+    const draft = duplicateResume(resume);
+    const snapshot: ResumeSnapshot = { version: 1, resume: draft, template, lastTouched: draft.lastSaved };
+    if (!persistSnapshot(snapshot)) return;
+    if (!activateSnapshot(snapshot)) return;
+    showToast("已复制简历，可以为另一个岗位单独修改。", "success");
+  };
 
-    if (remaining.length > 0) {
-      const fallback = loadResumeSnapshot(remaining[0].id);
-      if (fallback) {
-        useResumeStore.setState({ resume: { ...fallback, atsScore: calcATSScore(fallback) }, lastTouched: remaining[0].lastEdited });
-      } else {
-        const draft = makeResumeDraft(1);
-        useResumeStore.setState({ resume: draft, lastTouched: draft.lastSaved });
+  const deleteResume = () => {
+    if (!deleteTarget) return;
+    try {
+      const isCurrent = deleteTarget.id === resume.id;
+      let fallback: ResumeSnapshot | null = null;
+      if (isCurrent) {
+        for (const entry of recents) {
+          if (entry.id !== resume.id) fallback = loadResumeSnapshot(localStorage, entry.id);
+          if (fallback) break;
+        }
+        if (!fallback) {
+          const draft = makeResumeDraft(1);
+          fallback = { version: 1, resume: draft, template: "focus", lastTouched: draft.lastSaved };
+          if (!persistSnapshot(fallback)) return;
+        }
+        saveActiveResume(localStorage, fallback);
       }
-    } else {
-      const draft = makeResumeDraft(1);
-      useResumeStore.setState({ resume: draft, lastTouched: draft.lastSaved });
-    }
-
-    setDeleteOpen(false);
-    showToast(t("sidebar.deleted"), "info");
+      const updated = removeResumeSnapshot(localStorage, deleteTarget.id, recentsRef.current);
+      recentsRef.current = updated;
+      setRecents(updated);
+      if (fallback && !activateSnapshot(fallback)) return;
+      setDeleteTarget(null);
+      showToast(t("sidebar.deletedEntry", { name: deleteTarget.title }), "info");
+    } catch { reportSaveError(); }
   };
 
   return (
@@ -333,6 +285,8 @@ export function Sidebar() {
           </div>
         </div>
 
+        {saveError && <p role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">{saveError}</p>}
+
         {/* Section: 我的简历 */}
         <section className="rounded-xl border border-slate-100 bg-white p-4">
           <div className="mb-3 flex items-center gap-2">
@@ -342,8 +296,8 @@ export function Sidebar() {
 
           {/* Module 3: Recent resumes */}
           {recents.length > 0 && (
-            <div className="mb-3 space-y-1">
-              {recents.slice(0, 3).map((entry) => (
+            <div className="mb-3 max-h-64 space-y-1 overflow-y-auto" aria-label="已保存的简历">
+              {recents.map((entry) => (
                 <div
                   key={entry.id}
                   className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
@@ -353,6 +307,7 @@ export function Sidebar() {
                   <button
                     className="flex min-w-0 flex-1 items-center justify-between text-left"
                     onClick={() => switchToRecent(entry)}
+                    aria-current={entry.id === resume.id ? "true" : undefined}
                   >
                     <span className={`truncate font-medium ${entry.id === resume.id ? "text-brand-700" : "text-slate-700"}`}>{entry.title}</span>
                     <span className="ml-2 shrink-0 text-xs text-slate-400">{entry.lastEdited}</span>
@@ -360,17 +315,8 @@ export function Sidebar() {
                   {recents.length > 1 && (
                     <button
                       className="rounded p-1 text-slate-300 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
-                      onClick={() => {
-                        if (entry.id === resume.id) {
-                          setDeleteOpen(true);
-                          return;
-                        }
-                        const updated = recents.filter((item) => item.id !== entry.id);
-                        removeResumeSnapshot(entry.id);
-                        setRecents(updated);
-                        saveRecents(updated);
-                        showToast(t("sidebar.deletedEntry", { name: entry.title }), "info");
-                      }}
+                      aria-label={`删除简历 ${entry.title}`}
+                      onClick={() => setDeleteTarget(entry)}
                     >
                       <Trash2 size={12} />
                     </button>
@@ -394,7 +340,7 @@ export function Sidebar() {
               </button>
               <button
                 className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/15 px-3 py-2 text-xs backdrop-blur transition hover:bg-white/25"
-                onClick={() => setDeleteOpen(true)}
+                onClick={() => setDeleteTarget({ id: resume.id, title: resume.title, lastEdited: lastTouched })}
               >
                 <Trash2 size={14} />
                 {t("sidebar.delete")}
@@ -423,6 +369,9 @@ export function Sidebar() {
             <Plus size={16} />
             {t("sidebar.newResume")}
           </button>
+
+          <button type="button" onClick={copyCurrentResume} className="mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 hover:bg-neutral-50"><Copy size={15} />复制当前简历</button>
+          <p className="mt-2 text-xs leading-5 text-neutral-500">已保存 {recents.length} 份草稿，每份保留独立内容与模板。</p>
 
           <div className="my-5 h-px bg-slate-100" />
 
@@ -622,11 +571,11 @@ export function Sidebar() {
 
       {/* Delete Confirm */}
       <ConfirmDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={deleteCurrentResume}
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteResume}
         title={t("sidebar.deleteTitle")}
-        message={t("sidebar.deleteMsg")}
+        message={`将删除“${deleteTarget?.title || "这份简历"}”及其本地内容。请先导出需要保留的文件。`}
         confirmLabel={t("sidebar.deleteLabel")}
         danger
       />
@@ -637,7 +586,7 @@ export function Sidebar() {
         onClose={() => setNewResumeOpen(false)}
         onConfirm={createResume}
         title={t("sidebar.newTitle")}
-        message={t("sidebar.newMsg")}
+        message={locale === "zh" ? "将保存当前简历，并创建一份空白草稿。已有简历会保留在列表中。" : "Save this resume and create a blank draft. Existing resumes stay in your list."}
         confirmLabel={t("sidebar.newLabel")}
       />
 
@@ -647,7 +596,7 @@ export function Sidebar() {
         onClose={() => setSwitchTarget(null)}
         onConfirm={confirmSwitch}
         title={t("sidebar.switchTitle")}
-        message={switchTarget ? t("sidebar.switchMsg", { name: switchTarget.title }) : ""}
+        message={switchTarget ? (locale === "zh" ? `将先保存当前简历，再打开“${switchTarget.title}”。` : `Save this resume, then open “${switchTarget.title}”.`) : ""}
         confirmLabel={t("sidebar.switchLabel")}
       />
 

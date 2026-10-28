@@ -26,6 +26,7 @@ const sections = [
   { path: "/export", label: "预览与导出", icon: FileCheck2 }
 ];
 type ToolTab = "edit" | "guide" | "ai";
+const toolTabs = [{key:"edit",label:"编辑内容",icon:FileText},{key:"guide",label:"写作参考",icon:BookOpen},{key:"ai",label:"岗位建议",icon:Sparkles}] as const;
 
 function MainEditor() {
   const location = useLocation();
@@ -35,12 +36,19 @@ function MainEditor() {
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [managerOpen, setManagerOpen] = useState(false);
   const [checksOpen, setChecksOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const toolsRef = useRef<HTMLElement>(null);
   const managerButton = useRef<HTMLButtonElement>(null);
   const managerPanel = useRef<HTMLElement>(null);
+  const previousPath = useRef(location.pathname);
   const checks = getResumeChecks(resume);
+  const sectionIndex = sections.findIndex(section => section.path === location.pathname);
 
-  useEffect(() => { setTab("edit"); setMobileView("edit"); toolsRef.current?.scrollTo({ top: 0 }); }, [location.pathname, location.key]);
+  useEffect(() => {
+    setTab("edit"); setMobileView("edit"); toolsRef.current?.scrollTo({ top: 0 });
+    if (previousPath.current !== location.pathname && window.matchMedia("(max-width: 959px)").matches) toolsRef.current?.scrollIntoView({ block: "start" });
+    previousPath.current = location.pathname;
+  }, [location.pathname, location.key]);
   useEffect(() => {
     const open = () => { setTab("edit"); setMobileView("edit"); };
     window.addEventListener("offerforge:open-editor", open);
@@ -69,7 +77,7 @@ function MainEditor() {
 
   return (
     <div className="editor-app">
-      <TopBar onManage={() => setManagerOpen(true)} onCheck={() => setChecksOpen(!checksOpen)} checksOpen={checksOpen} onExport={() => navigate('/export')} managerButtonRef={managerButton} />
+      <TopBar saveError={saveError} onManage={() => setManagerOpen(true)} onCheck={() => setChecksOpen(!checksOpen)} checksOpen={checksOpen} onExport={() => navigate('/export')} managerButtonRef={managerButton} />
       <div className="workspace-toolbar">
         <TemplatePicker />
         <span className="workflow-caption">完善经历 <span aria-hidden="true">→</span> 针对岗位优化 <span aria-hidden="true">→</span> 检查与导出</span>
@@ -85,15 +93,26 @@ function MainEditor() {
         <nav className="section-outline" aria-label="简历章节"><p className="outline-caption">内容大纲</p>{sections.map(({path,label,icon:Icon}) => <NavLink key={path} to={path} className={({isActive}) => `outline-link ${isActive ? "active" : ""}`}><Icon size={16}/><span>{label}</span></NavLink>)}<div className="outline-tip"><BookOpen size={16}/><p>先写真实经历，再用参考与建议完善表达。</p></div></nav>
         <main className="preview-workspace" aria-label="实时简历预览"><LivePreview activeSection={location.pathname.slice(1)} /></main>
         <aside ref={toolsRef} className="editor-tools" aria-label="简历编辑与辅助">
-          <div className="editor-tool-tabs" role="tablist" aria-label="写作工具">{([{key:"edit",label:"编辑内容",icon:FileText},{key:"guide",label:"写作参考",icon:BookOpen},{key:"ai",label:"岗位建议",icon:Sparkles}] as const).map(item=><button id={`tool-tab-${item.key}`} role="tab" aria-selected={tab===item.key} aria-controls={`tool-panel-${item.key}`} key={item.key} onClick={()=>setTab(item.key)}><item.icon size={14}/>{item.label}</button>)}</div>
+          <div className="editor-tool-tabs" role="tablist" aria-label="写作工具">{toolTabs.map((item,index)=><button id={`tool-tab-${item.key}`} role="tab" tabIndex={tab===item.key ? 0 : -1} aria-selected={tab===item.key} aria-controls={`tool-panel-${item.key}`} key={item.key} onClick={()=>setTab(item.key)} onKeyDown={event=>{
+            const next = event.key === "ArrowRight" ? (index+1)%toolTabs.length : event.key === "ArrowLeft" ? (index+toolTabs.length-1)%toolTabs.length : event.key === "Home" ? 0 : event.key === "End" ? toolTabs.length-1 : -1;
+            if(next<0)return;
+            event.preventDefault(); setTab(toolTabs[next].key); document.getElementById(`tool-tab-${toolTabs[next].key}`)?.focus();
+          }}><item.icon size={14}/>{item.label}</button>)}</div>
           <div role="tabpanel" id="tool-panel-edit" aria-labelledby="tool-tab-edit" hidden={tab!=="edit"} className="editor-form-panel"><ErrorBoundary><Routes><Route path="/" element={<Navigate to="/basic" replace/>}/><Route path="/basic" element={<BasicInfo/>}/><Route path="/work" element={<WorkExperiencePage/>}/><Route path="/projects" element={<ProjectExperiencePage/>}/><Route path="/skills" element={<SkillsEducationPage/>}/><Route path="/export" element={<PreviewExportPage/>}/><Route path="*" element={<Navigate to="/basic" replace/>}/></Routes></ErrorBoundary></div>
           <div role="tabpanel" id="tool-panel-guide" aria-labelledby="tool-tab-guide" hidden={tab!=="guide"} className="editor-form-panel"><WritingGuide/></div>
           <div role="tabpanel" id="tool-panel-ai" aria-labelledby="tool-tab-ai" hidden={tab!=="ai"} className="editor-form-panel"><AIAnalysisPanel/></div>
+          {tab === "edit" && sectionIndex >= 0 && <nav aria-label="章节填写进度" className="section-progress">
+            <span className="section-progress-label">{sectionIndex + 1} / {sections.length} · {sections[sectionIndex].label}</span>
+            <div className="flex gap-2">
+              {sectionIndex > 0 && <button className="workspace-button" onClick={()=>navigate(sections[sectionIndex-1].path)}>上一步</button>}
+              {sectionIndex < sections.length-1 && <button className="workspace-button primary flex-1" onClick={()=>navigate(sections[sectionIndex+1].path)}>下一步：{sections[sectionIndex+1].label}</button>}
+            </div>
+          </nav>}
         </aside>
       </div>
       <div className="resume-manager" hidden={!managerOpen}>
         <button className="manager-backdrop" aria-label="关闭我的简历" onClick={()=>setManagerOpen(false)}/>
-        <section ref={managerPanel} className="manager-drawer" role="dialog" aria-modal="true" aria-label="我的简历与账户"><div className="manager-heading"><span className="flex items-center gap-2 font-semibold"><Menu size={17}/>我的简历与账户</span><button className="icon-button" aria-label="关闭我的简历与账户" onClick={()=>setManagerOpen(false)}><X size={18}/></button></div><Sidebar/></section>
+        <section ref={managerPanel} className="manager-drawer" role="dialog" aria-modal="true" aria-label="我的简历与账户"><div className="manager-heading"><span className="flex items-center gap-2 font-semibold"><Menu size={17}/>我的简历与账户</span><button className="icon-button" aria-label="关闭我的简历与账户" onClick={()=>setManagerOpen(false)}><X size={18}/></button></div><Sidebar onSaveStatus={setSaveError} onOpenEditor={() => { setManagerOpen(false); navigate("/basic"); }}/></section>
       </div>
     </div>
   );
