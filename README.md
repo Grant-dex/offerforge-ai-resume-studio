@@ -2,7 +2,7 @@
 
 AI 驱动的在线简历编辑器，支持多模板实时预览、AI 评分优化、PDF/Word 导出。
 
-**在线地址：** https://d4552228.offerforge-ai-resume-studio.pages.dev
+**在线地址：** https://xueai88.xyz
 
 ## 技术栈
 
