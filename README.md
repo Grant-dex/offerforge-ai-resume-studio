@@ -148,9 +148,10 @@ wrangler pages secret put RESEND_API_KEY       # Resend API Key（可选）
 ### 5. 部署
 
 ```bash
-npm run build
-wrangler pages deploy dist
+npm run deploy
 ```
+
+该命令会先构建再发布到生产环境。注意 Pages 项目的生产分支是 `production`，手动执行 `wrangler pages deploy` 时若分支名写错会只进入 Preview 环境。
 
 管理后台地址：`https://xxx.pages.dev/admin/`
 
