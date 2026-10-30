@@ -1,0 +1,8 @@
+name = "offerforge-ai-resume-studio"
+compatibility_date = "2026-05-20"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "offerforge-db"
+database_id = "2a01e615-8bb0-4354-b5fe-a74e7a606e3e"

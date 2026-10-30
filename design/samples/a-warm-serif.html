@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Sample A · 暖纸衬线</title>
+<style>
+  :root{
+    --paper:#FBF8F3; --ink:#1C1A17; --body:#2E2A26; --muted:#7C7368;
+    --rule:#E0D7C9; --accent:#A8452B;
+    --serif:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+    --sans:"PingFang SC","Helvetica Neue","Noto Sans SC",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E9E5DE;display:flex;justify-content:center;padding:0;
+       font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  .paper{width:794px;height:1123px;background:var(--paper);color:var(--body);
+         padding:60px 66px 52px;display:flex;flex-direction:column;position:relative}
+  .kicker{font-size:9px;letter-spacing:.34em;color:var(--muted);text-transform:uppercase}
+  h1{font-family:var(--serif);font-size:46px;font-weight:600;letter-spacing:.06em;
+     color:var(--ink);margin:12px 0 8px;line-height:1.1}
+  .role{font-size:13.5px;letter-spacing:.14em;color:var(--accent);font-weight:600}
+  .contact{margin-top:14px;font-size:11.5px;color:var(--muted);letter-spacing:.03em;
+           display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .contact i{font-style:normal;color:#C9BFB1}
+  header{border-bottom:1px solid var(--rule);padding-bottom:18px;position:relative}
+  header::after{content:"";position:absolute;left:0;bottom:-1px;width:88px;height:2px;background:var(--accent)}
+  section{margin-top:30px}
+  h2{display:flex;align-items:baseline;gap:12px;font-family:var(--serif);font-weight:600;
+     font-size:14px;letter-spacing:.16em;color:var(--ink);margin-bottom:12px}
+  h2 .idx{font-size:10px;letter-spacing:.1em;color:var(--accent);font-family:var(--sans);font-weight:600}
+  h2::after{content:"";flex:1;height:1px;background:var(--rule);transform:translateY(-3px)}
+  .summary{font-size:12.5px;line-height:1.9;color:var(--body)}
+  .entry{margin-bottom:19px}
+  .entry:last-child{margin-bottom:0}
+  .entry-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+  .org{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+  .job{font-size:11.5px;color:var(--muted);margin-left:8px}
+  .date{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap}
+  ul.bullets{list-style:none;margin-top:7px}
+  ul.bullets li{position:relative;padding-left:16px;font-size:12.2px;line-height:1.95;color:var(--body);margin-bottom:3px}
+  ul.bullets li::before{content:"—";position:absolute;left:0;color:#C3B7A6}
+  .tags{margin-top:6px;font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+  .edu{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--body)}
+  .edu strong{font-weight:600;color:var(--ink);font-size:13px}
+  .skills{display:flex;flex-wrap:wrap;gap:6px 0;font-size:12px;color:var(--body)}
+  .skills span:not(:last-child)::after{content:"／";color:#C9BFB1;margin:0 9px}
+  footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;
+         font-size:9px;letter-spacing:.24em;color:#B7AC9C;text-transform:uppercase;
+         padding-top:14px;border-top:1px solid var(--rule)}
+</style>
+</head>
+<body>
+<article class="paper">
+  <header>
+    <p class="kicker">Curriculum Vitae · 2026</p>
+    <h1>陈一诺</h1>
+    <p class="role">高级销售经理 · 企业级 SaaS</p>
+    <div class="contact">
+      <span>上海</span><i>/</i><span>138-0013-8000</span><i>/</i><span>chenyinuo@email.com</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="idx">01</span>个人简介</h2>
+    <p class="summary">五年 ToB 销售与客户增长经验，聚焦企业级 SaaS 与制造业客户。擅长从 0 到 1 搭建销售流程，累计签约 60+ 家中大型客户，年度回款最高 2,400 万元。</p>
+  </section>
+
+  <section>
+    <h2><span class="idx">02</span>工作经历</h2>
+
+    <div class="entry">
+      <div class="entry-head">
+        <p><span class="org">销售增长科技</span><span class="job">高级销售经理 · 上海</span></p>
+        <span class="date">2023.05 — 至今</span>
+      </div>
+      <ul class="bullets">
+        <li>负责华东区企业客户，年度回款 2,400 万元，连续两年超额完成目标 30% 以上</li>
+        <li>重构线索分级与商机推进流程，平均销售周期由 96 天缩短至 71 天</li>
+        <li>带领 6 人团队，新人 3 个月内独立成单率达到 80%</li>
+      </ul>
+      <p class="tags">B2B 销售 · 客户成功 · 流程搭建</p>
+    </div>
+
+    <div class="entry">
+      <div class="entry-head">
+        <p><span class="org">云启软件</span><span class="job">销售工程师 → 销售主管 · 上海</span></p>
+        <span class="date">2020.07 — 2023.04</span>
+      </div>
+      <ul class="bullets">
+        <li>从 0 搭建制造业客户名单，签约 32 家客户，首年营收 860 万元</li>
+        <li>主导 12 个招投标项目，中标率 58%，高于团队均值 15 个百分点</li>
+        <li>沉淀行业方案与销售话术库，被复用到 3 个区域团队</li>
+      </ul>
+      <p class="tags">招投标 · 行业方案 · 团队复制</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">03</span>项目经历</h2>
+    <div class="entry">
+      <div class="entry-head">
+        <p><span class="org">华东制造业客户拓展计划</span><span class="job">项目负责人</span></p>
+        <span class="date">2022.03 — 2023.03</span>
+      </div>
+      <ul class="bullets">
+        <li>联合市场部完成 4 场行业沙龙，获取有效线索 430 条，转化商机 87 个</li>
+        <li>建立客户分层运营机制，重点客户复购率提升至 92%</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">04</span>教育背景</h2>
+    <div class="edu">
+      <p><strong>华东理工大学</strong>　市场营销 · 本科</p>
+      <span class="date">2016 — 2020</span>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">05</span>专业技能</h2>
+    <div class="skills">
+      <span>客户开发</span><span>方案销售</span><span>商务谈判</span>
+      <span>Salesforce CRM</span><span>数据复盘</span><span>团队管理</span>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="idx">06</span>荣誉与证书</h2>
+    <div class="edu" style="margin-bottom:6px">
+      <p><strong>2023 年度销售冠军</strong>　全国 Top 3 / 年度回款第一</p>
+      <span class="date">2024.01</span>
+    </div>
+    <div class="edu">
+      <p><strong>区域最佳新人奖</strong>　云启软件 · 华东区</p>
+      <span class="date">2021.02</span>
+    </div>
+  </section>
+
+  <footer><span>OfferForge · Sample A</span><span>01 / 01</span></footer>
+</article>
+</body>
+</html>

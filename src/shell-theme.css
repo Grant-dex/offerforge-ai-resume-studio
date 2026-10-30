@@ -1,0 +1,181 @@
+/* ============================================================
+   Shell theme — option C
+   Fixed warm-paper shell (background, hairlines, wordmark);
+   only the accent follows the selected resume template.
+   Layout, copy and behaviour are untouched.
+   ============================================================ */
+
+.editor-app[data-template="focus"] {
+  --shell-accent: #a8452b;
+  --shell-accent-soft: rgba(168, 69, 43, 0.1);
+  --shell-accent-rgb: 168, 69, 43;
+}
+.editor-app[data-template="stack"] {
+  --shell-accent: #1f4fd8;
+  --shell-accent-soft: rgba(31, 79, 216, 0.07);
+  --shell-accent-rgb: 31, 79, 216;
+}
+.editor-app[data-template="lead"] {
+  --shell-accent: #1e3a33;
+  --shell-accent-soft: rgba(30, 58, 51, 0.1);
+  --shell-accent-rgb: 30, 58, 51;
+}
+
+.editor-app {
+  --shell-accent: #a8452b;
+  --shell-accent-soft: rgba(168, 69, 43, 0.1);
+  --shell-accent-rgb: 168, 69, 43;
+  --shell-bg: #f3eee5;
+  --shell-surface: #ffffff;
+  --shell-line: #e5ded1;
+  --shell-ink: #1c1a17;
+  --shell-muted: #6e675c;
+  --shell-serif: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
+  --brand-500: var(--shell-accent);
+  --brand-600: var(--shell-accent);
+  --brand-700: var(--shell-accent);
+  --brand: var(--shell-accent);
+  --brand-50: var(--shell-accent-soft);
+  --brand-500-rgb: var(--shell-accent-rgb);
+  --brand-600-rgb: var(--shell-accent-rgb);
+  background: var(--shell-bg);
+  color: var(--shell-ink);
+}
+
+/* ---- top bar ---- */
+.editor-app .workspace-topbar {
+  background: transparent;
+  border-bottom: 1px solid var(--shell-line);
+}
+.editor-app .wordmark {
+  font-family: var(--shell-serif);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--shell-ink);
+}
+.editor-app .brand-divider { background: var(--shell-line); }
+.editor-app .resume-title { color: var(--shell-ink); }
+.editor-app .save-status { color: var(--shell-muted); }
+
+/* ---- toolbar ---- */
+.editor-app .workspace-toolbar {
+  background: transparent;
+  border-bottom: 1px solid var(--shell-line);
+}
+.editor-app .workflow-caption { color: var(--shell-muted); }
+.editor-app .workspace-button {
+  background: var(--shell-surface);
+  border-color: var(--shell-line);
+  color: var(--shell-ink);
+}
+.editor-app .workspace-button:hover { background: #fbf8f1; }
+.editor-app .workspace-button.primary {
+  background: var(--shell-accent);
+  border-color: var(--shell-accent);
+  color: #fff;
+}
+.editor-app .workspace-button.primary:hover { background: var(--shell-accent); filter: brightness(0.94); }
+.editor-app .icon-button { color: var(--shell-muted); }
+.editor-app .icon-button:hover { background: #fbf8f1; color: var(--shell-ink); }
+
+/* ---- section outline ---- */
+.editor-app .section-outline {
+  background: transparent;
+  border-right: 1px solid var(--shell-line);
+}
+.editor-app .outline-caption,
+.editor-app .outline-tip { color: var(--shell-muted); }
+.editor-app .outline-tip { border-top-color: var(--shell-line); }
+.editor-app .outline-link { color: var(--shell-muted); }
+.editor-app .outline-link:hover { background: var(--shell-surface); color: var(--shell-ink); }
+.editor-app .outline-link.active {
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+  font-weight: 600;
+}
+
+/* ---- preview + editor panel ---- */
+.editor-app .preview-workspace { background: transparent; }
+.editor-app .editor-tools {
+  background: var(--shell-surface);
+  border-left: 1px solid var(--shell-line);
+}
+.editor-app .editor-tool-tabs {
+  background: var(--shell-surface);
+  border-bottom: 1px solid var(--shell-line);
+}
+.editor-app .editor-tool-tabs button { color: var(--shell-muted); }
+.editor-app .editor-tool-tabs button[aria-selected="true"] {
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+}
+.editor-app .section-progress {
+  background: var(--shell-surface);
+  border-top-color: var(--shell-line);
+}
+.editor-app .section-progress-label { color: var(--shell-muted); }
+
+/* ---- toolbar buttons and template cards ---- */
+.editor-app .workspace-toolbar button { border-color: var(--shell-line); }
+.editor-app .workspace-toolbar button[aria-pressed="true"] {
+  border-color: var(--shell-accent);
+  --tw-ring-color: var(--shell-accent);
+}
+.editor-app .workspace-toolbar button[aria-pressed="true"] svg { color: var(--shell-accent); }
+
+/* ---- preflight / mobile switch ---- */
+.editor-app .preflight-panel {
+  background: var(--shell-surface);
+  border-bottom-color: var(--shell-line);
+}
+.editor-app .preflight-item { border-left-color: var(--shell-line); }
+.editor-app .preflight-item:hover { background: #fbf8f1; }
+.editor-app .mobile-view-switch { background: var(--shell-surface); border-bottom-color: var(--shell-line); }
+.editor-app .mobile-view-switch button[aria-pressed="true"] {
+  background: var(--shell-accent);
+  color: #fff;
+}
+
+/* ---- fields ----
+   The shell only repaints the resting state. Error and disabled states keep
+   their own border so validation is not swallowed by the theme. */
+.editor-app input:not([type="checkbox"]):not([aria-invalid="true"]):not(:disabled),
+.editor-app textarea:not([aria-invalid="true"]):not(:disabled),
+.editor-app select:not([aria-invalid="true"]):not(:disabled) { border-color: var(--shell-line); }
+
+.editor-app input:not([type="checkbox"]):not([aria-invalid="true"]):not(:disabled):focus,
+.editor-app textarea:not([aria-invalid="true"]):not(:disabled):focus,
+.editor-app select:not([aria-invalid="true"]):not(:disabled):focus {
+  border-color: var(--shell-accent);
+  box-shadow: 0 0 0 3px var(--shell-accent-soft);
+}
+
+/* Invalid: darker amber plus an inset ring (still paired with a text message below). */
+.editor-app [aria-invalid="true"]:not(:disabled) {
+  border-color: #b45309;
+  box-shadow: inset 0 0 0 1px #b45309;
+}
+.editor-app [aria-invalid="true"]:not(:disabled):focus {
+  border-color: #b45309;
+  box-shadow: inset 0 0 0 1px #b45309, 0 0 0 3px rgba(180, 83, 9, 0.16);
+}
+
+.editor-app input:disabled,
+.editor-app textarea:disabled,
+.editor-app select:disabled {
+  border-color: #e7e1d6;
+  background: #f7f3ea;
+  color: #8c857a;
+  cursor: not-allowed;
+}
+
+/* ---- manager drawer ---- */
+.editor-app .manager-drawer { background: var(--shell-surface); }
+.editor-app .manager-heading { border-bottom-color: var(--shell-line); }
+
+/* warm the paper shadow so it sits on the warm desk */
+.editor-app .resume-paper { box-shadow: 0 8px 30px rgba(60, 45, 30, 0.09); }
+
+@media print {
+  .editor-app { background: #fff; }
+}

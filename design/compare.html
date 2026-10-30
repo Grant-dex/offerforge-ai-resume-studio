@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>OfferForge · 三张风格样稿对比</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#F7F7F5;font-family:"PingFang SC","Helvetica Neue",Arial,sans-serif;padding:36px 40px 44px;color:#1A1A1A}
+  header{display:flex;align-items:baseline;gap:14px;margin-bottom:26px}
+  h1{font-size:20px;letter-spacing:.02em}
+  header p{font-size:12px;color:#8A8A8A}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+  .card{background:#fff;border:1px solid #E6E6E3;padding:16px 16px 18px}
+  .shot{border:1px solid #ECECEA;overflow:hidden;background:#fff}
+  .shot img{display:block;width:100%}
+  .meta{padding-top:14px}
+  .name{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+  .tag{font-size:10px;letter-spacing:.08em;padding:2px 7px;border:1px solid #DADADA;color:#777}
+  .desc{margin-top:7px;font-size:11.5px;line-height:1.7;color:#5F5F5F}
+  .fit{margin-top:9px;font-size:10.5px;line-height:1.7;color:#8A8A8A}
+  .fit b{color:#444;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>同一份内容，三种纸面语言</h1>
+  <p>A4 794 × 1123px · 系统字体 · 可直接打印</p>
+</header>
+<div class="grid">
+  <div class="card">
+    <div class="shot"><img src="shots/a-warm-serif.png" alt="方案 A 暖纸衬线"></div>
+    <div class="meta">
+      <p class="name">A · 暖纸衬线 <span class="tag">EDITORIAL</span></p>
+      <p class="desc">暖白纸 + 宋体标题 + 陶土红单点强调，编号章节、细线分隔，像一本排得很好的杂志。</p>
+      <p class="fit"><b>适合</b> 品牌 / 市场 / 内容类岗位，强调品味与叙事。<b>注意</b> 宋体在小字号下略细，屏幕阅读需控制对比度。</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="shot"><img src="shots/b-cool-swiss.png" alt="方案 B 冷灰极简"></div>
+    <div class="meta">
+      <p class="name">B · 冷灰极简 <span class="tag">SWISS</span></p>
+      <p class="desc">纯白底、左侧栏目标签、瑞士网格式对齐，唯一彩色是那行职位与“至今”。</p>
+      <p class="fit"><b>适合</b> 技术 / 产品 / 咨询 / 外企，最“无风险”的通用款。<b>注意</b> 视觉个性最弱，容易被记成“又一份黑白简历”。</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="shot"><img src="shots/c-deep-green.png" alt="方案 C 深墨绿商务"></div>
+    <div class="meta">
+      <p class="name">C · 深墨绿 <span class="tag">BUSINESS</span></p>
+      <p class="desc">深墨绿头图承载姓名与联系方式，正文留白，菱形符号做章节锚点，稳重且有识别度。</p>
+      <p class="fit"><b>适合</b> 销售 / 管理 / 金融 / 实业，想要“可信赖感”。<b>注意</b> 满版深色较费墨，投递 ATS 时建议保留纯文本版。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

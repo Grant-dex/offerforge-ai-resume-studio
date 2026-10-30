@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>外壳细节 · 风格适配</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EEEDEA;font-family:"PingFang SC","Helvetica Neue",Arial,sans-serif;color:#1A1A1A;padding:26px 30px 30px}
+header{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+h1{font-size:19px}
+header p{font-size:12px;color:#8A8A86}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:#fff;border:1px solid #E0DFDB;padding:8px 8px 10px}
+.shot{border:1px solid #ECEBE8;overflow:hidden}
+.shot img{display:block;width:100%}
+.meta{display:flex;align-items:baseline;justify-content:space-between;padding-top:8px}
+.name{font-size:12.5px;font-weight:700}
+.kind{font-size:10.5px;color:#8A8A86}
+.desc{margin-top:3px;font-size:10.5px;line-height:1.55;color:#5F5F5C}
+</style></head><body>
+<header><h1>外壳细节：字标 / 强调色 / 选中态</h1><p>同一块区域，四套外壳</p></header>
+<div class="grid">
+  <div class="card"><div class="shot"><img src="shell-shots/crop-0-before.png"></div>
+    <div class="meta"><span class="name">现状</span><span class="kind">石墨灰 · 无衬线</span></div>
+    <p class="desc">字标无衬线、主按钮近黑、选中项灰底。和纸面没有共同语言。</p></div>
+  <div class="card"><div class="shot"><img src="shell-shots/crop-1-editorial.png"></div>
+    <div class="meta"><span class="name">暖纸衬线</span><span class="kind">陶土红 #A8452B · 宋体字标</span></div>
+    <p class="desc">米色底、衬线字标、陶土红主按钮，选中项用同色淡底。</p></div>
+  <div class="card"><div class="shot"><img src="shell-shots/crop-2-swiss.png"></div>
+    <div class="meta"><span class="name">冷灰网格</span><span class="kind">靛蓝 #1F4FD8 · 无衬线字标</span></div>
+    <p class="desc">中性白底，蓝色只做主按钮与当前项，和网格纸面一样克制。</p></div>
+  <div class="card"><div class="shot"><img src="shell-shots/crop-3-deep.png"></div>
+    <div class="meta"><span class="name">墨绿商务</span><span class="kind">墨绿 #1E3A33 · 宋体字标</span></div>
+    <p class="desc">米白底、衬线字标、墨绿主按钮，呼应纸面的深色头图。</p></div>
+</div>
+</body></html>

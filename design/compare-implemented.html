@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>三套模板 · 实装效果</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#F4F4F2;font-family:"PingFang SC","Helvetica Neue",Arial,sans-serif;padding:30px 34px 34px;color:#1A1A1A}
+header{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}
+h1{font-size:19px;letter-spacing:.02em}
+header p{font-size:12px;color:#8A8A8A}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:#fff;border:1px solid #E3E3E0;padding:12px 12px 14px}
+.shot{border:1px solid #ECECEA;overflow:hidden}
+.shot img{display:block;width:100%}
+.meta{padding-top:11px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.name{font-size:13.5px;font-weight:700}
+.order{font-size:10.5px;color:#8A8A8A}
+.desc{margin-top:5px;font-size:11px;line-height:1.65;color:#5F5F5F}
+</style></head><body>
+<header><h1>三套模板 · 实装效果</h1><p>同一份内容 · 只切换模板 · 预览即 A4</p></header>
+<div class="grid">
+  <div class="card"><div class="shot"><img src="app-shots/1-editorial.png"></div>
+    <div class="meta"><span class="name">暖纸衬线</span><span class="order">简介·工作·项目·教育</span></div>
+    <p class="desc">暖白纸、宋体标题、陶土红编号。默认模板。</p></div>
+  <div class="card"><div class="shot"><img src="app-shots/2-swiss.png"></div>
+    <div class="meta"><span class="name">冷灰网格</span><span class="order">项目·简介·工作·技能</span></div>
+    <p class="desc">左栏英文标签、右侧内容，唯一彩色是职位行。</p></div>
+  <div class="card"><div class="shot"><img src="app-shots/3-deep.png"></div>
+    <div class="meta"><span class="name">墨绿商务</span><span class="order">教育·简介·项目·工作</span></div>
+    <p class="desc">深绿头图承载身份，菱形章节锚点。</p></div>
+</div>
+</body></html>
