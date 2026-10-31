@@ -5,3 +5,7 @@ dist
 *.local
 .wrangler
 *.tsbuildinfo
+
+# Backend credentials
+.dev.vars
+.dev.vars.*

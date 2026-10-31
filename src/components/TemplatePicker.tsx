@@ -95,7 +95,7 @@ function SectionOrderPicker() {
   const orderText = sectionOrder.map((key) => SECTION_LABELS[key]).join(" → ");
   const moveButton = "inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 text-neutral-600 transition hover:border-neutral-400 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-neutral-200 disabled:hover:text-neutral-600";
   return (
-    <section className="mt-4 border-t border-neutral-200 pt-4" aria-labelledby="section-order-heading">
+    <section className="section-order-picker mt-4 border-t border-neutral-200 pt-4" aria-labelledby="section-order-heading">
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
         <h4 id="section-order-heading" className="text-sm font-semibold text-neutral-800">章节顺序</h4>
         <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">{presetLabel(orderPreset)}</span>
@@ -108,11 +108,11 @@ function SectionOrderPicker() {
             type="button"
             aria-pressed={orderPreset === preset.key}
             onClick={() => applyOrderPreset(preset.key)}
-            className={`rounded-lg border bg-white p-2.5 text-left transition ${orderPreset === preset.key ? "border-neutral-700 ring-1 ring-neutral-700" : "border-neutral-200 hover:border-neutral-400"}`}
+            className={`template-option rounded-lg border bg-white p-2.5 text-left transition ${orderPreset === preset.key ? "border-neutral-700 ring-1 ring-neutral-700" : "border-neutral-200 hover:border-neutral-400"}`}
           >
             <span className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-neutral-800">{preset.name}</span>
-              {orderPreset === preset.key && <Check size={13} className="shrink-0 text-neutral-700" />}
+              {orderPreset === preset.key && <Check size={13} className="template-check shrink-0 text-neutral-700" />}
             </span>
             <span className="mt-1 block text-[10px] leading-4 text-neutral-500">{preset.order.map((key) => SECTION_LABELS[key]).join(" → ")}</span>
             <span className="mt-1 block text-[10px] leading-4 text-neutral-400">{preset.hint}</span>
@@ -142,23 +142,23 @@ export function TemplatePicker({ expanded, onSelect }: { expanded?: boolean; onS
   return (
     <div className="min-w-0">
       {expanded === undefined && (
-        <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50" onClick={() => setOpen(!open)} aria-expanded={visible} aria-controls={panelId}>
+        <button type="button" className="template-picker-toggle inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50" onClick={() => setOpen(!open)} aria-expanded={visible} aria-controls={panelId}>
           <LayoutTemplate size={15} />模板与排版<ChevronDown size={14} className={visible ? "rotate-180" : ""} />
         </button>
       )}
       {visible && (
-        <div id={panelId} className={expanded === undefined ? "mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4" : ""}>
+        <div id={panelId} className={expanded === undefined ? "template-picker-panel mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4" : ""}>
           <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
             <h3 className="text-sm font-semibold text-neutral-800">纸面外观</h3>
             <p className="text-xs text-neutral-500">只改外观，内容和章节顺序都不动</p>
           </div>
           <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))" }}>
             {resumeTemplates.map((item) => (
-              <button key={item.key} type="button" aria-pressed={template === item.key} onClick={() => { setTemplate(item.key); onSelect?.(); }} className={`rounded-lg border bg-white p-2.5 text-left transition ${template === item.key ? "border-neutral-700 ring-1 ring-neutral-700" : "border-neutral-200 hover:border-neutral-400"}`}>
+              <button key={item.key} type="button" aria-pressed={template === item.key} onClick={() => { setTemplate(item.key); onSelect?.(); }} className={`template-option rounded-lg border bg-white p-2.5 text-left transition ${template === item.key ? "border-neutral-700 ring-1 ring-neutral-700" : "border-neutral-200 hover:border-neutral-400"}`}>
                 <TemplateThumb templateKey={item.key} style={item.style} />
                 <div className="mt-2.5 flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-neutral-800">{item.name}</span>
-                  {template === item.key ? <Check size={15} className="shrink-0 text-neutral-700" /> : <span className="shrink-0 text-[10px] text-neutral-400">{item.audience}</span>}
+                  {template === item.key ? <Check size={15} className="template-check shrink-0 text-neutral-700" /> : <span className="shrink-0 text-[10px] text-neutral-400">{item.audience}</span>}
                 </div>
                 <span className="mt-1 block text-xs leading-5 text-neutral-500">{item.description}</span>
               </button>

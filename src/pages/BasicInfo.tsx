@@ -37,12 +37,12 @@ export function BasicInfo() {
   return (
     <div className="min-w-0">
       <StepHeading title={t("basic.title")} subtitle={t("basic.subtitle")} />
-      <div className="mb-6 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="avatar-card mb-6 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
         <input ref={fileRef} type="file" accept="image/*" aria-label={t("basic.uploadAvatar")} className="hidden" onChange={handleAvatarUpload} />
         <button
           type="button"
           aria-label={t("basic.uploadAvatar")}
-          className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white text-slate-500 transition hover:border-slate-500 ${buttonFocus}`}
+          className={`avatar-upload flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white text-slate-500 transition hover:border-slate-500 ${buttonFocus}`}
           onClick={() => fileRef.current?.click()}
         >
           {resume.personal.avatar ? <img src={resume.personal.avatar} alt={t("basic.avatarLabel")} className="h-full w-full object-cover" /> : <Camera size={22} />}
@@ -94,7 +94,7 @@ export function Field({ label, value, onChange, placeholder, type = "text", auto
   const [focused, setFocused] = useState(false);
   const visibleError = !focused && !disabled ? error : "";
   return (
-    <label className="block min-w-0">
+    <label className="form-field block min-w-0">
       <span className="mb-2 block text-xs font-semibold text-slate-600">{label}</span>
       <input aria-label={label} disabled={disabled} aria-invalid={!!visibleError} aria-describedby={visibleError ? errorId : undefined} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={`${inputStyle} ${visibleError ? "border-amber-500" : ""} disabled:bg-neutral-50 disabled:text-neutral-500`} type={type} value={value} placeholder={placeholder} autoComplete={autoComplete} onChange={(event) => onChange(event.target.value)} />
       {visibleError && <span id={errorId} className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-amber-800"><CircleAlert aria-hidden="true" size={13} className="mt-1 shrink-0" /><span>{visibleError}</span></span>}
@@ -104,7 +104,7 @@ export function Field({ label, value, onChange, placeholder, type = "text", auto
 
 export function StepHeading({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <header className="mb-6">
+    <header className="step-heading mb-6">
       <h2 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
       <p className="mt-1.5 text-xs leading-6 text-slate-500">{subtitle}</p>
     </header>
@@ -186,7 +186,7 @@ export function TagEditor({ tags, onUpdate, label, placeholder }: {
 export function BulletEditor({ label, bullets, onChange, placeholder }: { label: string; bullets: string[]; onChange: (bullets: string[]) => void; placeholder?: string }) {
   const { locale } = useT();
   return (
-    <label className="block min-w-0">
+    <label className="bullet-editor block min-w-0">
       <span className="mb-2 block text-xs font-semibold text-slate-600">{label}</span>
       <textarea
         className={`${inputStyle} min-h-[180px] resize-y leading-7`}

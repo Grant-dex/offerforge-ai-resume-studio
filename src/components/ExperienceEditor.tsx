@@ -116,14 +116,14 @@ export function ExperienceEditor<T extends IdentifiedExperience>({ items, resume
     <div className="space-y-4">
       {items.map((item, index) => {
         const open = !collapsed.has(item.id), panelId = `${prefix}-${item.id}`;
-        return <section key={item.id} ref={node => { if (node) cards.current.set(item.id, node); else cards.current.delete(item.id); }} aria-label={`${zh ? label : kind === "work" ? "Work experience" : "Project"} ${index + 1}`} className={`min-w-0 rounded-xl border border-neutral-200 bg-white ${flashId === item.id ? "entry-focus-flash" : ""}`}>
-          <h3><button type="button" aria-expanded={open} aria-controls={panelId} className="flex w-full items-start gap-2.5 rounded-t-xl p-4 text-left hover:bg-neutral-50" onClick={() => setCollapsed(current => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })}>
+        return <section key={item.id} ref={node => { if (node) cards.current.set(item.id, node); else cards.current.delete(item.id); }} aria-label={`${zh ? label : kind === "work" ? "Work experience" : "Project"} ${index + 1}`} data-experience-kind={kind} className={`experience-card min-w-0 rounded-xl border border-neutral-200 bg-white ${flashId === item.id ? "entry-focus-flash" : ""}`}>
+          <h3><button type="button" aria-expanded={open} aria-controls={panelId} className="experience-heading flex w-full items-start gap-2.5 rounded-t-xl p-4 text-left hover:bg-neutral-50" onClick={() => setCollapsed(current => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })}>
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-xs font-medium text-neutral-500">{String(index + 1).padStart(2, "0")}</span>
             <span className="min-w-0 flex-1"><span className="block break-words text-sm font-semibold leading-6 text-neutral-800">{visibleTitle(item)}</span><span className="mt-1 block break-words text-[11px] font-normal leading-5 text-neutral-500">{summary(item) || (zh ? "待补充岗位与时间" : "Add a role and dates")}</span></span>
             <ChevronDown aria-hidden="true" size={16} className={`mt-1 shrink-0 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`}/>
           </button></h3>
-          <div id={panelId} hidden={!open} className="grid min-w-0 grid-cols-1 gap-4 border-t border-neutral-100 p-4">{children(item)}</div>
-          <div className="flex items-center gap-1 border-t border-neutral-100 px-3 py-2">
+          <div id={panelId} hidden={!open} className="experience-form grid min-w-0 grid-cols-1 gap-4 border-t border-neutral-100 p-4">{children(item)}</div>
+          <div className="experience-footer flex items-center gap-1 border-t border-neutral-100 px-3 py-2">
             {([-1, 1] as const).map(direction => {
               const Icon = direction === -1 ? ArrowUp : ArrowDown;
               const word = zh ? direction === -1 ? "上移" : "下移" : direction === -1 ? "Move up" : "Move down";
@@ -134,6 +134,6 @@ export function ExperienceEditor<T extends IdentifiedExperience>({ items, resume
         </section>;
       })}
     </div>
-    <button ref={addButton} type="button" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 py-3 text-sm font-medium text-neutral-600 transition hover:border-neutral-500 hover:bg-neutral-100" onClick={() => { const id = onAdd(); setFocusTarget({ id, edit: true }); }}><Plus size={16}/>{zh ? `添加${label}` : kind === "work" ? "Add work experience" : "Add project experience"}</button>
+    <button ref={addButton} type="button" className="experience-add mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 py-3 text-sm font-medium text-neutral-600 transition hover:border-neutral-500 hover:bg-neutral-100" onClick={() => { const id = onAdd(); setFocusTarget({ id, edit: true }); }}><Plus size={16}/>{zh ? `添加${label}` : kind === "work" ? "Add work experience" : "Add project experience"}</button>
   </div>;
 }

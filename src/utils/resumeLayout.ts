@@ -12,7 +12,7 @@ export const PAGE_HEIGHT = PAPER_WIDTH * PAGE_HEIGHT_MM / CONTENT_WIDTH_MM;
 export const PAGE_MARGIN = PAPER_WIDTH * PAGE_MARGIN_MM / CONTENT_WIDTH_MM;
 export const CONTENT_HEIGHT = PAPER_WIDTH * CONTENT_HEIGHT_MM / CONTENT_WIDTH_MM;
 export interface PageSlice { start: number; end: number }
-export interface SectionPosition { key: string; top: number }
+export interface SectionPosition { key: string; top: number; bottom: number }
 export interface EntryPosition { id: string; kind: "work" | "project"; top: number; bottom: number; label: string }
 export interface ResumeLayout { pages: PageSlice[]; sections: SectionPosition[]; entries: EntryPosition[] }
 
@@ -45,7 +45,7 @@ export function readResumeLayout(root: HTMLElement): ResumeLayout {
     blocks.push({ top, bottom: Math.max(bottom, first?.bottom ?? bottom) });
   }
   const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-resume-section]')).map(element => ({
-    key: element.dataset.resumeSection!, top: element.getBoundingClientRect().top - origin,
+    key: element.dataset.resumeSection!, top: element.getBoundingClientRect().top - origin, bottom: element.getBoundingClientRect().bottom - origin,
   }));
   const entries: EntryPosition[] = Array.from(root.querySelectorAll<HTMLElement>("[data-entry-id]")).map((element) => {
     const rect = element.getBoundingClientRect();

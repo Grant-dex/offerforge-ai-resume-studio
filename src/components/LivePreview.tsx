@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Pencil } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 import { getResumeTemplate } from "../data/resumeTemplates";
 import { useResumeStore } from "../store/resumeStore";
-import { entriesStartingOnPage } from "../utils/entryNavigation";
+import { entriesStartingOnPage, entryHitPadding, previewEditTargetAtY } from "../utils/entryNavigation";
 import { CONTENT_HEIGHT, PAGE_HEIGHT, PAGE_MARGIN, PAGE_WIDTH, PAPER_WIDTH, readResumeLayout, type ResumeLayout } from "../utils/resumeLayout";
 import { ResumeDocument } from "./resume";
 
@@ -26,6 +26,7 @@ export function LivePreview({ activeSection, onEditSection, onEditEntry }: {
   const source = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
   const [zoom, setZoom] = useState("fit");
+  const [hoverTarget, setHoverTarget] = useState<{ page: number; key: string } | null>(null);
   const [layout, setLayout] = useState<ResumeLayout>({ pages: [{ start: 0, end: CONTENT_HEIGHT }], sections: [], entries: [] });
   useLayoutEffect(() => {
     const host = viewport.current;
@@ -44,8 +45,26 @@ export function LivePreview({ activeSection, onEditSection, onEditEntry }: {
     void document.fonts.ready.then(measure);
     return () => { disposed = true; observer.disconnect(); };
   }, [resume, template, sectionOrder]);
+  useEffect(() => {
+    const clear = () => setHoverTarget(null);
+    window.addEventListener("scroll", clear, true);
+    window.addEventListener("resize", clear);
+    return () => {
+      window.removeEventListener("scroll", clear, true);
+      window.removeEventListener("resize", clear);
+    };
+  }, []);
+  useEffect(() => { setHoverTarget(null); }, [resume, template, sectionOrder, zoom]);
   const scale = zoom === "fit" ? Math.min(1, Math.max(0.1, (availableWidth || PAGE_WIDTH) / PAGE_WIDTH)) : Number(zoom);
   const paperColor = getResumeTemplate(template).style.paper;
+  const revealAtPointer = (event: PointerEvent<HTMLDivElement>, pageIndex: number) => {
+    const button = (event.target as Element).closest<HTMLElement>("[data-preview-edit]");
+    const page = layout.pages[pageIndex];
+    if (!page) return;
+    const y = (event.clientY - event.currentTarget.getBoundingClientRect().top) / scale - PAGE_MARGIN + page.start;
+    const key = button?.dataset.previewEdit ?? previewEditTargetAtY(layout.sections, layout.entries, layout.pages, pageIndex, y);
+    setHoverTarget(current => current?.page === pageIndex && current.key === key ? current : key ? { page: pageIndex, key } : null);
+  };
   return (
     <div className="w-full min-w-0" aria-label="简历实时预览">
       <div className="a4-toolbar">
@@ -60,7 +79,12 @@ export function LivePreview({ activeSection, onEditSection, onEditEntry }: {
         {layout.pages.map((page, index) => (
           <div className="a4-page-group" key={index} style={{ width: PAGE_WIDTH * scale }}>
             <div className="a4-page-label">第 {index + 1} 页 / 共 {layout.pages.length} 页</div>
-            <div className="a4-page-frame" style={{ width: PAGE_WIDTH * scale, height: PAGE_HEIGHT * scale }}>
+            <div className="a4-page-frame"
+              onPointerMove={event => { if (event.pointerType !== "touch") revealAtPointer(event, index); }}
+              onPointerDown={event => { if (event.pointerType === "touch") revealAtPointer(event, index); }}
+              onPointerLeave={event => { if (event.pointerType !== "touch") setHoverTarget(null); }}
+              onFocusCapture={() => setHoverTarget(null)}
+              style={{ width: PAGE_WIDTH * scale, height: PAGE_HEIGHT * scale }}>
               <div className="a4-page" style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT, transform: `scale(${scale})` }}>
                 <div className="a4-content" aria-hidden="true" style={{ left: PAGE_MARGIN, top: PAGE_MARGIN, width: PAPER_WIDTH, height: CONTENT_HEIGHT, background: paperColor }}>
                   <div style={{ height: page.end - page.start, overflow: "hidden" }}>
@@ -71,19 +95,24 @@ export function LivePreview({ activeSection, onEditSection, onEditEntry }: {
                 </div>
               </div>
               {/* Overlay lives outside the scaled page, so buttons keep a usable size at every zoom level. */}
-              <div className="a4-overlay">
+              <div className="a4-overlay" data-preview-only>
                 {onEditSection && layout.sections.filter(section => section.top >= page.start && section.top < page.end).map(section => (
-                  <button key={section.key} type="button" className="a4-edit" aria-label={`编辑${sectionNames[section.key]}（第 ${index + 1} 页）`} onClick={() => onEditSection(sectionTarget(section.key))} style={{ top: (PAGE_MARGIN + section.top - page.start) * scale, right: PAGE_MARGIN * scale + 6 }}><Pencil size={12}/>编辑{sectionNames[section.key]}</button>
+                  <button key={section.key} type="button" className="a4-edit" data-preview-edit={`section:${section.key}`} data-revealed={hoverTarget?.page === index && hoverTarget.key === `section:${section.key}`} aria-label={`编辑${sectionNames[section.key]}（第 ${index + 1} 页）`} onClick={() => onEditSection(sectionTarget(section.key))} style={{ top: (PAGE_MARGIN + section.top - page.start) * scale, right: PAGE_MARGIN * scale + 6 }}><Pencil size={12}/>编辑{sectionNames[section.key]}</button>
                 ))}
                 {onEditEntry && entriesStartingOnPage(layout.entries, layout.pages, index).map(entry => (
                   <button
                     key={entry.id}
                     type="button"
                     className="a4-entry-edit"
+                    data-preview-edit={`entry:${entry.id}`}
+                    data-revealed={hoverTarget?.page === index && hoverTarget.key === `entry:${entry.id}`}
                     aria-label={`编辑「${entry.label || (entry.kind === "work" ? "工作经历" : "项目经历")}」`}
                     title={`编辑「${entry.label || (entry.kind === "work" ? "工作经历" : "项目经历")}」`}
                     onClick={() => onEditEntry({ kind: entry.kind, id: entry.id })}
-                    style={{ top: (PAGE_MARGIN + entry.top - page.start) * scale, left: Math.max(2, PAGE_MARGIN * scale - 28) }}
+                    style={{ top: (PAGE_MARGIN + entry.top - page.start) * scale, left: Math.max(2, PAGE_MARGIN * scale - 28),
+                      "--hit-top": `${entryHitPadding(entriesStartingOnPage(layout.entries, layout.pages, index), entry, scale).top}px`,
+                      "--hit-bottom": `${entryHitPadding(entriesStartingOnPage(layout.entries, layout.pages, index), entry, scale).bottom}px`,
+                    } as CSSProperties}
                   >
                     <Pencil size={13} aria-hidden="true" />
                   </button>

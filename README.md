@@ -98,7 +98,16 @@ npm run dev
 # 打开 http://127.0.0.1:5173/
 ```
 
-**注意：** 本地开发时不存在 Cloudflare Functions，登录和 AI 功能需部署到 Cloudflare Pages 后使用。
+本地 AI 功能由 Vite 服务端代理提供：
+
+1. 复制 `.env.example` 为 `.env.local`，填写服务端变量 `AI_API_KEY`。不要使用 `VITE_` 前缀。
+2. 执行 `npm run dev`，打开终端显示的本机地址（默认 `http://127.0.0.1:5173/`）。
+3. 在“岗位建议”中使用简历评分、修改建议和岗位匹配。本机模式不依赖登录或会员，服务仅接受本机、同源请求。
+4. 更换 `.env.local` 中的密钥后，Vite 会重新加载配置；若未生效，重启开发服务。
+
+`npm run preview` 或普通静态服务器仅预览页面，不提供 AI 后端。生产环境提供限额 AI 试用，并保留原有会员权限；在 Pages Secrets 中设置 `AI_API_KEY`。可选模型变量为 `DEEPSEEK_MODEL_FLASH`（默认 `deepseek-flash`）和 `DEEPSEEK_MODEL_PRO`（默认 `deepseek-v4-pro`）。
+
+密钥错误、余额不足、请求限流、超时及返回格式错误会显示明确提示，不会生成虚构评分。分析文本不包含姓名、电话、邮箱和头像；调用会使用 DeepSeek 账户的额度。
 
 本地地址仅在运行服务器的电脑上可用，关闭开发服务器后将无法打开。分享给他人需要部署后的 HTTPS 地址。
 
@@ -165,3 +174,10 @@ MIT
 - 预览与 PDF 共用纸张、10 mm 页边距和文字行分页规则；短经历与标题尽量同行，长段落在文字行之间续页，适用于白色、暖纸和墨绿模板。
 - 分享页继续采用适合阅读的响应式布局。PDF 仍为图片版，Word 为可编辑版本。
 - 三种模板均显示工作城市与独立的经验概述；有头像时为姓名及职位预留空间。
+
+### 公开 AI 试用
+
+- `wrangler.toml` 中启用 `AI_TRIAL_ENABLED` 后，访客无需登录即可试用。默认每个 IP 每个 UTC 日 6 点、全站每日 60 点；简历分析消耗 2 点，岗位匹配消耗 1 点。额度按发起的模型请求计数。
+- 匿名试用始终使用极速模型。D1 在同一条条件写入中检查个人和全站额度；数据库只记录按日加盐的网络地址摘要，不保存原始 IP 或简历内容。
+- 首次发布前执行：`npx wrangler d1 execute offerforge-db --remote --file cloudflare/migrations/20261031_ai_trial.sql`。
+- 关闭 `AI_TRIAL_ENABLED` 可恢复仅登录且已授权会员使用 AI。密钥始终位于服务端 Secrets。

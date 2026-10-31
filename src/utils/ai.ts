@@ -1,6 +1,16 @@
 import type { ResumeData } from "../types/resume";
 
 const BASE_URL = "/api/ai";
+export interface AIServiceStatus { mode: "local" | "trial"; configured: boolean; remaining?: number; limit?: number; resetAt?: string }
+export async function fetchAIServiceStatus(): Promise<AIServiceStatus | null> {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${BASE_URL}/status`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return ["local", "trial"].includes(data.mode) && typeof data.configured === "boolean" ? data : null;
+  } catch { return null; }
+}
 
 function getAuthToken(): string {
   try {
@@ -24,7 +34,7 @@ async function callAIProxy(
   signal?: AbortSignal
 ): Promise<any> {
   const token = getAuthToken();
-  if (!token) {
+  if (!token && !(await fetchAIServiceStatus())) {
     throw new Error("请先登录后再使用 AI 功能");
   }
 
@@ -38,6 +48,7 @@ async function callAIProxy(
     signal
   });
 
+  if (!res.headers.get("content-type")?.includes("application/json")) throw new Error("AI 后端未运行。请使用 npm run dev 打开完整功能页面。");
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: "请求失败" }));
     throw new Error(data.error || `请求失败 (${res.status})`);
@@ -46,15 +57,12 @@ async function callAIProxy(
   return res.json();
 }
 
-function buildResumeSummary(resume: ResumeData): string {
+export function buildResumeSummary(resume: ResumeData): string {
   const safe = (s: string | undefined | null) => s || "";
   return `
 【基本信息】
-姓名：${safe(resume.personal.name)}
 目标岗位：${safe(resume.personal.role)}
 资历：${safe(resume.personal.seniority)}
-邮箱：${safe(resume.personal.email)}
-电话：${safe(resume.personal.phone)}
 城市：${safe(resume.personal.city)}
 个人简介：${safe(resume.personal.summary)}
 
@@ -77,6 +85,8 @@ ${p.tags?.length ? `   标签：${p.tags.join("、")}` : ""}
 
 【教育背景】
 ${safe(resume.education.school)} · ${safe(resume.education.degree)} · ${safe(resume.education.major)} · ${safe(resume.education.years)}
+${safe(resume.education.description)}
+${(resume.education.tags || []).join("、")}
 `.trim();
 }
 
@@ -125,7 +135,5 @@ export async function fetchAIOptimizeBullets(
   originalBullets: string[],
   signal?: AbortSignal
 ): Promise<string[]> {
-  // This function currently not proxied - returns original bullets
-  // Can be extended later with a server-side endpoint
-  return originalBullets;
+  return callAIProxy("optimize-bullets", { context, bullets: originalBullets, model: getPreferredModel() }, signal);
 }

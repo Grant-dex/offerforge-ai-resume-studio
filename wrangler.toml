@@ -6,3 +6,8 @@ pages_build_output_dir = "dist"
 binding = "DB"
 database_name = "offerforge-db"
 database_id = "2a01e615-8bb0-4354-b5fe-a74e7a606e3e"
+
+[vars]
+AI_TRIAL_ENABLED = "true"
+AI_TRIAL_PER_IP = "6"
+AI_TRIAL_GLOBAL_DAILY = "60"

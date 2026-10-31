@@ -283,9 +283,18 @@
 .a4-edit { position: absolute; z-index: 3; display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid #ddd; background: #fff; border-radius: 5px; color: #555; font-size: 12px; opacity: 0; transition: opacity .15s ease, color .15s ease, border-color .15s ease; }
 .a4-entry-edit { position: absolute; z-index: 3; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid #d8d2c6; background: #fff; border-radius: 6px; color: #6b6257; opacity: 0; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); transition: opacity .15s ease, color .15s ease, border-color .15s ease; }
 .a4-entry-edit:hover { color: #1c1a17; border-color: var(--shell-accent, #a8452b); }
-.a4-page-frame:hover .a4-edit, .a4-page-frame:hover .a4-entry-edit,
-.a4-page-frame:focus-within .a4-edit, .a4-page-frame:focus-within .a4-entry-edit,
-.a4-edit:focus-visible, .a4-entry-edit:focus-visible { opacity: 1; }
+/* Only the current context or keyboard focus reveals a desktop control. */
+.a4-overlay > :is(.a4-edit, .a4-entry-edit) { pointer-events: none; }
+.a4-overlay > [data-revealed="true"],
+.a4-overlay > :is(.a4-edit, .a4-entry-edit):focus { opacity: 1; pointer-events: auto; }
+@media (hover: none), (pointer: coarse), (max-width: 760px) {
+  .a4-overlay > :is(.a4-edit, .a4-entry-edit) { opacity: 1; pointer-events: auto; }
+  .a4-entry-edit::before {
+    content: ""; position: absolute; left: 0; right: -20px;
+    top: calc(-1 * var(--hit-top, 10px)); bottom: calc(-1 * var(--hit-bottom, 10px));
+  }
+  .a4-edit::before { content: ""; position: absolute; inset: -7px 0; }
+}
 .tpl-editorial .r-head.has-avatar { padding-right: 82px; min-height: 96px; }
 /* Brief, non-blocking highlight when jumping from the preview to an entry. */
 .entry-focus-flash { animation: entry-focus-flash 1.8s ease-out; }
@@ -298,9 +307,6 @@
   .entry-focus-flash { animation: none; box-shadow: 0 0 0 2px rgba(168, 69, 43, .45); }
 }
 .tpl-deep .r-band.has-avatar { padding-right: 132px; min-height: 154px; }
-@media (hover: none) { .a4-edit, .a4-entry-edit { opacity: 1; } }
-/* Narrow screens are usually touch: keep the per-entry affordance visible. */
-@media (max-width: 760px) { .a4-entry-edit { opacity: 1; } }
 @media (max-width: 760px) {
   .resume-responsive .tpl-editorial .r-head.has-avatar { padding-right: 0; }
   .resume-responsive .tpl-deep .r-band.has-avatar { padding-right: 22px; }

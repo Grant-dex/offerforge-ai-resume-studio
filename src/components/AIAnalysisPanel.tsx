@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useResumeStore } from "../store/resumeStore";
 import { isProUser } from "../utils/proGate";
-import type { AIScoreResult, AISuggestion, JDMatchResult } from "../utils/ai";
-import { fetchAIScore, fetchAISuggestions, fetchJDMatch } from "../utils/ai";
+import type { AIScoreResult, AISuggestion, JDMatchResult, AIServiceStatus } from "../utils/ai";
+import { fetchAIScore, fetchAISuggestions, fetchJDMatch, fetchAIServiceStatus } from "../utils/ai";
 import {
   replaceSuggestionText, resolveSuggestionTarget, resumeAnalysisKey,
   suggestionRoute, suggestionTargetValue, type SuggestionTarget,
@@ -37,6 +37,7 @@ export function AIAnalysisPanel() {
   const [suggestions, setSuggestions] = useState<Result<AISuggestion[]>>(emptyResult);
   const [jd, setJd] = useState<Result<JDMatchResult>>(emptyResult);
   const [jdInput, setJdInput] = useState("");
+  const [aiService, setAIService] = useState<AIServiceStatus | null>(null);
   const [proGateOpen, setProGateOpen] = useState(false);
   const [applied, setApplied] = useState<Record<string, { target: SuggestionTarget; before: string; after: string }>>({});
   const analysisRequest = useRef<AbortController | null>(null);
@@ -49,14 +50,26 @@ export function AIAnalysisPanel() {
     jdRequest.current?.abort();
   }, []);
 
-  function checkPro() {
-    if (isProUser()) return true;
+  useEffect(() => {
+    let disposed = false;
+    void fetchAIServiceStatus().then(status => { if (!disposed) setAIService(status); });
+    return () => { disposed = true; };
+  }, []);
+
+  async function checkAIAccess(cost = 1) {
+    const status = await fetchAIServiceStatus();
+    setAIService(status);
+    if (status?.mode === "trial" && Number(status.remaining) < cost) {
+      showToast(cost === 2 ? "剩余额度不足 2 点，可尝试岗位匹配，或等待额度重置。" : "今日 AI 试用额度已用完，请在重置后再试。", "info");
+      return false;
+    }
+    if (status || isProUser()) return true;
     setProGateOpen(true);
     return false;
   }
 
   async function analyzeResume() {
-    if (!checkPro()) return;
+    if (!(await checkAIAccess(2))) return;
     analysisRequest.current?.abort();
     const controller = new AbortController();
     analysisRequest.current = controller;
@@ -92,10 +105,11 @@ export function AIAnalysisPanel() {
         }
       })(),
     ]);
+    setAIService(await fetchAIServiceStatus());
   }
 
   async function analyzeJob() {
-    if (!jdInput.trim() || !checkPro()) return;
+    if (!jdInput.trim() || !(await checkAIAccess())) return;
     jdRequest.current?.abort();
     const controller = new AbortController();
     jdRequest.current = controller;
@@ -112,7 +126,7 @@ export function AIAnalysisPanel() {
       if (!controller.signal.aborted) setJd({ data, key, pending: false, error: null });
     } catch (error) {
       if (!controller.signal.aborted) setJd((previous) => ({ ...previous, pending: false, error: errorMessage(error) }));
-    }
+    } finally { if (!controller.signal.aborted) setAIService(await fetchAIServiceStatus()); }
   }
 
   function commitReplacement(target: SuggestionTarget, before: string, after: string): boolean {
@@ -198,7 +212,7 @@ export function AIAnalysisPanel() {
           {score.data.suggestions.length > 0 && <ul className="mt-4 list-disc space-y-1 border-t border-neutral-100 pl-4 pt-3 text-xs leading-6 text-neutral-600">{score.data.suggestions.filter((text) => typeof text === "string").map((text, index) => <li key={index}>{text}</li>)}</ul>}
           <p className="mt-3 text-[11px] leading-5 text-neutral-500">AI 内容评估，仅作为修改参考；实际分页请在导出前预览。</p>
         </div>}
-        <Status pending={false} error={suggestions.error} stale={Boolean(suggestions.data && suggestions.key !== currentKey && (!score.data || score.key === currentKey))} />
+        <Status pending={false} error={suggestions.error === score.error ? null : suggestions.error} stale={Boolean(suggestions.data && suggestions.key !== currentKey && (!score.data || score.key === currentKey))} />
         {suggestions.data?.length === 0 && <p className="rounded-lg bg-neutral-50 p-3 text-xs leading-6 text-neutral-600">本次未返回具体修改建议，仍可参考评分提示并自行检查。</p>}
         {suggestions.data?.map((suggestion, index) => {
           const key = `${index}:${suggestion.id}:${suggestion.original}`;
@@ -219,7 +233,7 @@ export function AIAnalysisPanel() {
         })}
         {!score.data && !suggestions.data && !pending && !score.error && !suggestions.error && <p className="rounded-lg bg-neutral-50 p-3 text-xs leading-6 text-neutral-500">尚未分析。准备好内容后，点击上方按钮开始。</p>}
       </section>
-      <p className="text-[11px] leading-5 text-neutral-500">AI 分析需登录并拥有 PRO 权限。建议只使用能够核实的经历与成果。</p>
+      <p className="text-[11px] leading-5 text-neutral-500">{aiService?.mode === "trial" ? `每日 AI 试用 ${aiService.limit} 点，当前剩余 ${aiService.remaining} 点。简历分析用 2 点，岗位匹配用 1 点；同一网络地址共享额度。` : aiService ? aiService.configured ? "使用本机 DeepSeek 服务。分析时会发送经历文本，不发送姓名、电话、邮箱或头像。" : "尚未配置 DeepSeek Key，请填写项目 .env.local 中的 AI_API_KEY。" : "AI 分析需登录并拥有 PRO 权限。建议只使用能够核实的经历与成果。"}</p>
       <Modal open={proGateOpen} onClose={() => setProGateOpen(false)} title="使用 AI 分析">
         <p className="text-sm leading-7 text-neutral-600">AI 评分、修改建议与岗位匹配需要登录并拥有 PRO 权限。你可以继续编辑简历、查看写作参考和预览排版。</p>
         <button type="button" onClick={() => setProGateOpen(false)} className={`${primaryButton} mt-5 w-full`}>继续编辑</button>

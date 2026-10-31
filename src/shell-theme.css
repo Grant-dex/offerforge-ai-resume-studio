@@ -1,39 +1,20 @@
-/* ============================================================
-   Shell theme — option C
-   Fixed warm-paper shell (background, hairlines, wordmark);
-   only the accent follows the selected resume template.
-   Layout, copy and behaviour are untouched.
-   ============================================================ */
-
-.editor-app[data-template="focus"] {
-  --shell-accent: #a8452b;
-  --shell-accent-soft: rgba(168, 69, 43, 0.1);
-  --shell-accent-rgb: 168, 69, 43;
-}
-.editor-app[data-template="stack"] {
-  --shell-accent: #1f4fd8;
-  --shell-accent-soft: rgba(31, 79, 216, 0.07);
-  --shell-accent-rgb: 31, 79, 216;
-}
-.editor-app[data-template="lead"] {
-  --shell-accent: #1e3a33;
-  --shell-accent-soft: rgba(30, 58, 51, 0.1);
-  --shell-accent-rgb: 30, 58, 51;
-}
-
+/* Visual skin only: keep layout rules in index.css and paper rules in resume-paper.css. */
 .editor-app {
-  --shell-accent: #a8452b;
-  --shell-accent-soft: rgba(168, 69, 43, 0.1);
-  --shell-accent-rgb: 168, 69, 43;
-  --shell-bg: #f3eee5;
+  --shell-accent: #98543f;
+  --shell-accent-hover: #824734;
+  --shell-accent-soft: rgba(152, 84, 63, .075);
+  --shell-accent-rgb: 152, 84, 63;
+  --shell-bg: #f2f3f2;
   --shell-surface: #ffffff;
-  --shell-line: #e5ded1;
-  --shell-ink: #1c1a17;
-  --shell-muted: #6e675c;
+  --shell-line: #e1e5e3;
+  --shell-line-strong: #cdd4d1;
+  --shell-ink: #2a3330;
+  --shell-muted: #68746e;
+  --shell-subtle: #f7f9f8;
   --shell-serif: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
   --brand-500: var(--shell-accent);
-  --brand-600: var(--shell-accent);
-  --brand-700: var(--shell-accent);
+  --brand-600: var(--shell-accent-hover);
+  --brand-700: var(--shell-accent-hover);
   --brand: var(--shell-accent);
   --brand-50: var(--shell-accent-soft);
   --brand-500-rgb: var(--shell-accent-rgb);
@@ -41,141 +22,254 @@
   background: var(--shell-bg);
   color: var(--shell-ink);
 }
+.editor-app[data-template="stack"] {
+  --shell-accent: #42618d;
+  --shell-accent-hover: #324d74;
+  --shell-accent-soft: rgba(66, 97, 141, .075);
+  --shell-accent-rgb: 66, 97, 141;
+}
+.editor-app[data-template="lead"] {
+  --shell-accent: #315b4b;
+  --shell-accent-hover: #254638;
+  --shell-accent-soft: rgba(49, 91, 75, .075);
+  --shell-accent-rgb: 49, 91, 75;
+}
 
-/* ---- top bar ---- */
+/* Quiet chrome gives the resume a distinct paper surface. */
 .editor-app .workspace-topbar {
-  background: transparent;
-  border-bottom: 1px solid var(--shell-line);
+  background: #fff;
+  border-bottom-color: var(--shell-line);
+  box-shadow: 0 1px 3px rgba(35, 48, 41, .025);
 }
 .editor-app .wordmark {
   font-family: var(--shell-serif);
   font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--shell-ink);
+  letter-spacing: .05em;
+  color: #29372f;
 }
 .editor-app .brand-divider { background: var(--shell-line); }
 .editor-app .resume-title { color: var(--shell-ink); }
 .editor-app .save-status { color: var(--shell-muted); }
-
-/* ---- toolbar ---- */
+.editor-app .save-status > svg { color: #527b63; }
+.editor-app .save-status[role="alert"] > svg { color: #b45309; }
 .editor-app .workspace-toolbar {
-  background: transparent;
-  border-bottom: 1px solid var(--shell-line);
-}
-.editor-app .workflow-caption { color: var(--shell-muted); }
-.editor-app .workspace-button {
-  background: var(--shell-surface);
-  border-color: var(--shell-line);
-  color: var(--shell-ink);
-}
-.editor-app .workspace-button:hover { background: #fbf8f1; }
-.editor-app .workspace-button.primary {
-  background: var(--shell-accent);
-  border-color: var(--shell-accent);
-  color: #fff;
-}
-.editor-app .workspace-button.primary:hover { background: var(--shell-accent); filter: brightness(0.94); }
-.editor-app .icon-button { color: var(--shell-muted); }
-.editor-app .icon-button:hover { background: #fbf8f1; color: var(--shell-ink); }
-
-/* ---- section outline ---- */
-.editor-app .section-outline {
-  background: transparent;
-  border-right: 1px solid var(--shell-line);
-}
-.editor-app .outline-caption,
-.editor-app .outline-tip { color: var(--shell-muted); }
-.editor-app .outline-tip { border-top-color: var(--shell-line); }
-.editor-app .outline-link { color: var(--shell-muted); }
-.editor-app .outline-link:hover { background: var(--shell-surface); color: var(--shell-ink); }
-.editor-app .outline-link.active {
-  background: var(--shell-accent-soft);
-  color: var(--shell-accent);
-  font-weight: 600;
-}
-
-/* ---- preview + editor panel ---- */
-.editor-app .preview-workspace { background: transparent; }
-.editor-app .editor-tools {
-  background: var(--shell-surface);
-  border-left: 1px solid var(--shell-line);
-}
-.editor-app .editor-tool-tabs {
-  background: var(--shell-surface);
-  border-bottom: 1px solid var(--shell-line);
-}
-.editor-app .editor-tool-tabs button { color: var(--shell-muted); }
-.editor-app .editor-tool-tabs button[aria-selected="true"] {
-  background: var(--shell-accent-soft);
-  color: var(--shell-accent);
-}
-.editor-app .section-progress {
-  background: var(--shell-surface);
-  border-top-color: var(--shell-line);
-}
-.editor-app .section-progress-label { color: var(--shell-muted); }
-
-/* ---- toolbar buttons and template cards ---- */
-.editor-app .workspace-toolbar button { border-color: var(--shell-line); }
-.editor-app .workspace-toolbar button[aria-pressed="true"] {
-  border-color: var(--shell-accent);
-  --tw-ring-color: var(--shell-accent);
-}
-.editor-app .workspace-toolbar button[aria-pressed="true"] svg { color: var(--shell-accent); }
-
-/* ---- preflight / mobile switch ---- */
-.editor-app .preflight-panel {
-  background: var(--shell-surface);
+  background: #fafbf9;
   border-bottom-color: var(--shell-line);
 }
-.editor-app .preflight-item { border-left-color: var(--shell-line); }
-.editor-app .preflight-item:hover { background: #fbf8f1; }
-.editor-app .mobile-view-switch { background: var(--shell-surface); border-bottom-color: var(--shell-line); }
-.editor-app .mobile-view-switch button[aria-pressed="true"] {
-  background: var(--shell-accent);
+.editor-app .workflow-caption { color: var(--shell-muted); }
+.editor-app .workspace-button,
+.editor-app .template-picker-toggle {
+  color: #46544c;
+  background: #fff;
+  border-color: #dce2de;
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(31, 47, 38, .035);
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+}
+.editor-app .workspace-button:not(:disabled):hover,
+.editor-app .template-picker-toggle:hover {
+  background: #f7faf8;
+  border-color: #bdcac1;
+  box-shadow: 0 2px 5px rgba(31, 47, 38, .06);
+}
+.editor-app .workspace-button.primary {
   color: #fff;
-}
-
-/* ---- fields ----
-   The shell only repaints the resting state. Error and disabled states keep
-   their own border so validation is not swallowed by the theme. */
-.editor-app input:not([type="checkbox"]):not([aria-invalid="true"]):not(:disabled),
-.editor-app textarea:not([aria-invalid="true"]):not(:disabled),
-.editor-app select:not([aria-invalid="true"]):not(:disabled) { border-color: var(--shell-line); }
-
-.editor-app input:not([type="checkbox"]):not([aria-invalid="true"]):not(:disabled):focus,
-.editor-app textarea:not([aria-invalid="true"]):not(:disabled):focus,
-.editor-app select:not([aria-invalid="true"]):not(:disabled):focus {
+  background: var(--shell-accent);
   border-color: var(--shell-accent);
-  box-shadow: 0 0 0 3px var(--shell-accent-soft);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 4px rgba(var(--shell-accent-rgb), .14);
+}
+.editor-app .workspace-button.primary:not(:disabled):hover {
+  background: var(--shell-accent-hover);
+  border-color: var(--shell-accent-hover);
+  box-shadow: 0 3px 8px rgba(var(--shell-accent-rgb), .2);
+}
+.editor-app .workspace-button[aria-expanded="true"],
+.editor-app .template-picker-toggle[aria-expanded="true"] {
+  color: var(--shell-accent);
+  border-color: rgba(var(--shell-accent-rgb), .35);
+  background: var(--shell-accent-soft);
+}
+.editor-app .icon-button { color: var(--shell-muted); }
+.editor-app .icon-button:hover { color: var(--shell-ink); background: #eef3ef; }
+.editor-app :is(button,a):focus-visible {
+  outline-color: var(--shell-accent);
 }
 
-/* Invalid: darker amber plus an inset ring (still paired with a text message below). */
+/* Navigation selection is indicated by tone and a slim inset rule. */
+.editor-app .section-outline {
+  background: #f9faf8;
+  border-right: 1px solid var(--shell-line);
+}
+.editor-app .outline-caption { color: #637267; letter-spacing: .08em; }
+.editor-app .outline-link { color: #68756c; border-radius: 9px; transition: background-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.editor-app .outline-link:hover { color: #34493b; background: #edf1ec; }
+.editor-app .outline-link.active {
+  color: var(--shell-accent);
+  background: var(--shell-accent-soft);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--shell-accent), inset 0 0 0 1px rgba(var(--shell-accent-rgb), .045);
+}
+.editor-app .outline-tip { border-top-color: var(--shell-line); color: #6e7a71; }
+.editor-app .outline-tip > svg { color: #7b8c7f; }
+
+/* A neutral desk, a white editing surface, and understated controls. */
+.editor-app .preview-workspace {
+  background: radial-gradient(ellipse at 50% 0, rgba(255,255,255,.65), transparent 75%);
+}
+.editor-app .a4-toolbar { color: #637267; }
+.editor-app .a4-toolbar .font-medium { color: #3a4b3f; }
+.editor-app .a4-page-label { color: #637267; font-variant-numeric: tabular-nums; }
+.editor-app .a4-page-frame {
+  box-shadow: 0 2px 5px rgba(36, 48, 39, .035), 0 12px 32px rgba(36, 48, 39, .07), 0 0 0 1px rgba(36, 48, 39, .04);
+}
+.editor-app .a4-zoom select { color: #46564a; border-color: #dce2de; border-radius: 7px; background: #fff; }
+.editor-app .a4-edit,
+.editor-app .a4-entry-edit { color: var(--shell-accent); border-color: rgba(var(--shell-accent-rgb), .25); box-shadow: 0 2px 6px rgba(35, 48, 41, .08); }
+.editor-app .a4-edit:hover,
+.editor-app .a4-entry-edit:hover { background: #fff; border-color: var(--shell-accent); }
+.editor-app .editor-tools { background: #fff; border-left: 1px solid var(--shell-line); }
+.editor-app .editor-tool-tabs {
+  background: #fdfefd;
+  border-bottom-color: var(--shell-line);
+}
+.editor-app .editor-tool-tabs button { color: #6c7970; border-radius: 8px; transition: background-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.editor-app .editor-tool-tabs button:hover { color: #3f5144; background: #f2f5f1; }
+.editor-app .editor-tool-tabs button[aria-selected="true"] {
+  color: var(--shell-accent);
+  background: var(--shell-accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(var(--shell-accent-rgb), .07);
+}
+.editor-app .section-progress { background: #fcfdfb; border-top-color: var(--shell-line); }
+.editor-app .section-progress-label { color: #6f7d72; }
+
+/* Limit text recolouring to chrome: never reach into the paper or PDF source. */
+.editor-app :where(.editor-form-panel, .workspace-toolbar, .resume-library) :is(.text-slate-900, .text-neutral-900, .text-slate-800, .text-neutral-800) { color: #2b3930; }
+.editor-app :where(.editor-form-panel, .workspace-toolbar, .resume-library) :is(.text-slate-600, .text-neutral-600) { color: #56675b; }
+.editor-app :where(.editor-form-panel, .workspace-toolbar, .resume-library) :is(.text-slate-500, .text-neutral-500) { color: #6b786f; }
+.editor-app :where(.editor-form-panel, .workspace-toolbar, .resume-library) :is(.text-slate-400, .text-neutral-400) { color: #68756b; }
+.editor-app .step-heading h2 { color: #263b2d; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+
+/* Fields: softer resting fill, clearly distinct hover/focus, intact error states. */
+.editor-app :is(input:not([type="checkbox"]):not([type="file"]),textarea,select):not([aria-invalid="true"]):not(:disabled) {
+  border-color: #dce3df;
+  border-radius: 9px;
+  background-color: #fbfcfb;
+  color: #34443a;
+  box-shadow: inset 0 1px 2px rgba(36, 48, 39, .025);
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.editor-app :is(input,textarea)::placeholder { color: #68756b; opacity: 1; }
+.editor-app :is(input:not([type="checkbox"]):not([type="file"]),textarea,select):not([aria-invalid="true"]):not(:disabled):hover { border-color: #bdc9c1; background-color: #fff; }
+.editor-app :is(input:not([type="checkbox"]):not([type="file"]),textarea,select):not([aria-invalid="true"]):not(:disabled):focus {
+  border-color: var(--shell-accent);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px var(--shell-accent-soft), 0 1px 2px rgba(36, 48, 39, .025);
+}
+.editor-app input[type="checkbox"] { accent-color: var(--shell-accent); }
 .editor-app [aria-invalid="true"]:not(:disabled) {
   border-color: #b45309;
+  background-color: #fffaf4;
   box-shadow: inset 0 0 0 1px #b45309;
 }
 .editor-app [aria-invalid="true"]:not(:disabled):focus {
   border-color: #b45309;
-  box-shadow: inset 0 0 0 1px #b45309, 0 0 0 3px rgba(180, 83, 9, 0.16);
+  box-shadow: inset 0 0 0 1px #b45309, 0 0 0 3px rgba(180,83,9,.14);
 }
-
-.editor-app input:disabled,
-.editor-app textarea:disabled,
-.editor-app select:disabled {
-  border-color: #e7e1d6;
-  background: #f7f3ea;
-  color: #8c857a;
+.editor-app :is(input,textarea,select):disabled {
+  border-color: #e3e8e3;
+  background: #f2f5f1;
+  color: #7b877d;
   cursor: not-allowed;
 }
 
-/* ---- manager drawer ---- */
-.editor-app .manager-drawer { background: var(--shell-surface); }
-.editor-app .manager-heading { border-bottom-color: var(--shell-line); }
+/* Photo and experience cards have the same edge and surface language. */
+.editor-app .avatar-card {
+  background: linear-gradient(120deg, #f5f8f3, #fbfcf9);
+  border-color: #e0e7dd;
+  border-radius: 13px;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.editor-app .avatar-upload { color: #72836f; border-color: #bdcbbb; background: rgba(255,255,255,.9); }
+.editor-app .avatar-upload:hover { color: var(--shell-accent); border-color: var(--shell-accent); box-shadow: 0 2px 8px rgba(36,48,39,.06); }
+.editor-app .experience-card { border-color: #dfe6df; border-radius: 13px; box-shadow: 0 2px 6px rgba(36,48,39,.025); }
+.editor-app .experience-heading { background: #fcfdfb; }
+.editor-app .experience-heading:hover { background: #f5f8f2; }
+.editor-app .experience-heading > span:first-child { background: #edf2e9; color: #64815c; box-shadow: inset 0 0 0 1px #e2e9dd; }
+.editor-app .experience-heading[aria-expanded="true"] > span:first-child { background: var(--shell-accent-soft); color: var(--shell-accent); box-shadow: none; }
+.editor-app .experience-footer { background: #fafcf8; border-color: #e7ece4; }
+.editor-app .experience-footer button:not(:disabled):hover { color: var(--shell-accent); background: var(--shell-accent-soft); }
+.editor-app .experience-add { background: #f5f8f2; border-color: #c7d3c1; color: #5f7654; }
+.editor-app .experience-add:hover { background: #edf3e8; border-color: #a5b79b; color: #405d34; }
+.editor-app .editor-form-panel details { background: #f6f9f3; border-color: #e0e7db; }
 
-/* warm the paper shadow so it sits on the warm desk */
-.editor-app .resume-paper { box-shadow: 0 8px 30px rgba(60, 45, 30, 0.09); }
+/* Project cards give narrative writing priority without changing the workspace grid. */
+.editor-app .experience-card[data-experience-kind="project"] .experience-heading {
+  padding: 12px 14px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .experience-heading > span:nth-child(2) > span:first-child {
+  line-height: 22px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .experience-heading > span:nth-child(2) > span:last-child {
+  margin-top: 3px;
+  line-height: 18px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .experience-form {
+  gap: 12px;
+  padding: 14px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .form-field > span:first-child {
+  margin-bottom: 5px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .form-field input {
+  height: 38px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .ongoing-date-toggle {
+  margin-top: 8px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .bullet-editor {
+  padding-top: 4px;
+}
+.editor-app .experience-card[data-experience-kind="project"] .bullet-editor > span:first-child {
+  font-size: 13px;
+  line-height: 20px;
+  color: #354c3d;
+}
+.editor-app .experience-card[data-experience-kind="project"] .bullet-editor textarea {
+  min-height: 320px;
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 30px;
+  letter-spacing: .01em;
+  tab-size: 2;
+}
+@media (max-width: 580px) {
+  .editor-app .experience-card[data-experience-kind="project"] .form-field input {
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+/* The template chooser shares the shell accent without repainting its thumbnails. */
+.editor-app .template-picker-panel { background: #f7f9f5; border-color: var(--shell-line); border-radius: 13px; box-shadow: 0 4px 14px rgba(36,48,39,.035); }
+.editor-app .template-option { border-color: #dfe5dc; border-radius: 10px; box-shadow: 0 1px 3px rgba(36,48,39,.025); }
+.editor-app .template-option:hover { border-color: #b3c1ac; box-shadow: 0 3px 8px rgba(36,48,39,.055); }
+.editor-app .template-option[aria-pressed="true"] { border-color: var(--shell-accent); box-shadow: 0 0 0 1px var(--shell-accent), 0 2px 8px rgba(var(--shell-accent-rgb), .08); }
+.editor-app .template-option[aria-pressed="true"] .template-check { color: var(--shell-accent); }
+.editor-app .section-order-picker { border-color: var(--shell-line); }
+
+.editor-app .preflight-panel { background: #fcfdfb; border-bottom-color: var(--shell-line); }
+.editor-app .preflight-item { border-left-color: #d2ddce; }
+.editor-app .preflight-item:hover { background: #f3f7ef; }
+.editor-app .mobile-view-switch { background: #fafcf8; border-bottom-color: var(--shell-line); }
+.editor-app .mobile-view-switch button { color: #6b7c66; border-radius: 8px; }
+.editor-app .mobile-view-switch button[aria-pressed="true"] { background: var(--shell-accent); color: #fff; box-shadow: 0 2px 5px rgba(var(--shell-accent-rgb), .14); }
+.editor-app .manager-drawer { background: #fff; box-shadow: 12px 0 50px rgba(32,48,36,.12); }
+.editor-app .manager-heading { background: #fafcf8; border-bottom-color: var(--shell-line); color: #344a39; }
+.editor-app .manager-backdrop { background: rgba(30,43,33,.3); backdrop-filter: blur(3px); }
 
 @media print {
   .editor-app { background: #fff; }
+  .editor-app .a4-page-frame { box-shadow: none; }
 }
